@@ -1,10 +1,17 @@
+mod interval;
+
 use super::error::Result;
 use async_trait::async_trait;
+use crate::Action;
+
+pub use interval::*;
 
 /// Represents a trigger that initiates workflow execution.
 ///
 /// Triggers listen for events from various sources (webhooks, schedules,
 /// file changes, etc.) and start workflows when those events occur.
+/// 
+/// Trigger requires `Action` trait implemented.
 ///
 /// # Example
 ///
@@ -35,16 +42,13 @@ use async_trait::async_trait;
 /// }
 /// ```
 #[async_trait]
-pub trait Trigger: Send + Sync {
+pub trait Trigger: Send + Sync + Action {
     /// Starts the trigger and begins listening for events.
     ///
     /// This method should block until `stop()` is called or an error occurs.
     /// Implementations should handle their own concurrency (spawning tasks,
     /// setting up listeners, etc.).
     async fn start(&mut self) -> Result<()>;
-
-    /// Runs on every trigger. Should be called from `start`
-    async fn run(&mut self) -> Result<()>;
 
     /// Stops the trigger and cleans up resources.
     ///
@@ -57,7 +61,7 @@ pub trait Trigger: Send + Sync {
     }
 
     /// Returns a unique identifier for this trigger.
-    fn name(&self) -> &str;
+    fn name(&self) -> String;
 
     /// Returns whether the trigger is currently running.
     ///
@@ -68,7 +72,9 @@ pub trait Trigger: Send + Sync {
     }
 }
 
-/// Spawns a new thread with the trigger instance running on it.
-pub async fn new_trigger(mut trigger: impl Trigger + 'static) {
-    tokio::spawn( async move { trigger.start().await });
+/// Spawns new threads with the trigger instances running on them.
+pub async fn new_trigger(triggers: impl IntoIterator<Item = impl Trigger + 'static>) {
+    for mut trigger in triggers {
+        tokio::spawn(async move { trigger.start().await });
+    }
 }

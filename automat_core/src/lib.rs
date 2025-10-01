@@ -13,6 +13,8 @@
 //! and reliable automation across the entire ecosystem.
 
 mod actions;
+mod callback;
+mod display_macro;
 mod error;
 mod main_loop;
 mod triggers;

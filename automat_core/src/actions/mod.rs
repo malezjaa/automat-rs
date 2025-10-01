@@ -5,6 +5,4 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait Action: Send + Sync {
     async fn run(&self) -> Result<()>;
-
-    fn name(&self) -> String;
 }
