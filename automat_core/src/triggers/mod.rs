@@ -15,7 +15,7 @@ pub use interval::*;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust no_run
 /// struct WebhookTrigger {
 ///     port: u16,
 ///     server_handle: Option<ServerHandle>,
