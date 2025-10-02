@@ -1,5 +1,6 @@
 mod input;
 mod open_in_browser;
+mod titlebar;
 
 use super::error::Result;
 use async_trait::async_trait;
@@ -7,6 +8,7 @@ use async_trait::async_trait;
 pub use enigo::{Axis, Button, Coordinate, Direction, Key};
 pub use input::*;
 pub use open_in_browser::*;
+pub use titlebar::*;
 
 /// Represents a synchronous action that can be executed.
 ///

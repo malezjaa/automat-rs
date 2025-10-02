@@ -10,7 +10,6 @@ use std::ffi::OsStr;
 /// # Examples
 ///
 /// ```no_run
-/// # use your_crate::OpenInBrowser;
 /// // Use default browser
 /// let action = OpenInBrowser::new("https://example.com");
 ///

@@ -48,7 +48,6 @@ impl ActionAsync for IntervalTrigger {
 impl Trigger for IntervalTrigger {
     async fn start(&mut self) -> Result<()> {
         let mut ticker = interval(self.interval());
-        ticker.tick().await; // Skip the immediate first tick
 
         loop {
             ticker.tick().await;
