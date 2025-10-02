@@ -1,8 +1,8 @@
 mod interval;
 
 use super::error::Result;
-use async_trait::async_trait;
 use crate::Action;
+use async_trait::async_trait;
 
 pub use interval::*;
 
@@ -10,7 +10,7 @@ pub use interval::*;
 ///
 /// Triggers listen for events from various sources (webhooks, schedules,
 /// file changes, etc.) and start workflows when those events occur.
-/// 
+///
 /// Trigger requires `Action` trait implemented.
 ///
 /// # Example
@@ -42,7 +42,7 @@ pub use interval::*;
 /// }
 /// ```
 #[async_trait]
-pub trait Trigger: Send + Sync + Action {
+pub trait Trigger: Send + Sync {
     /// Starts the trigger and begins listening for events.
     ///
     /// This method should block until `stop()` is called or an error occurs.
@@ -65,8 +65,8 @@ pub trait Trigger: Send + Sync + Action {
 
     /// Returns whether the trigger is currently running.
     ///
-    /// Default implementation returns `false`. Override if you need to
-    /// track running state.
+    /// The default implementation returns `false`. Override if you need to
+    /// track the running state.
     fn is_running(&self) -> bool {
         false
     }

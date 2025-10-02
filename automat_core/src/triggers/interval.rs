@@ -1,4 +1,4 @@
-use crate::{Action, Result, Trigger, async_callback, impl_display_debug};
+use crate::{Action, ActionAsync, Result, Trigger, async_callback, impl_display_debug};
 use async_trait::async_trait;
 use std::pin::Pin;
 use std::time::Duration;
@@ -38,8 +38,8 @@ impl IntervalTrigger {
 
 #[async_trait]
 /// Action just calls provided callback.
-impl Action for IntervalTrigger {
-    async fn run(&self) -> Result<()> {
+impl ActionAsync for IntervalTrigger {
+    async fn run_async(&self) -> Result<()> {
         self.call().await
     }
 }
@@ -52,7 +52,7 @@ impl Trigger for IntervalTrigger {
 
         loop {
             ticker.tick().await;
-            self.run().await?;
+            self.run_async().await?;
         }
     }
 

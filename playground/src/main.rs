@@ -1,8 +1,8 @@
 use automat_core::*;
-use std::process::Command;
-use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    KeyboardAction::text("Hello!!!").run()?;
+
     await_shutdown().await
 }

@@ -49,9 +49,8 @@ impl OpenInBrowser {
     }
 }
 
-#[async_trait]
 impl Action for OpenInBrowser {
-    async fn run(&self) -> Result<()> {
+    fn run(&self) -> Result<()> {
         let result = if let Some(browser) = &self.browser {
             open::with(&self.url, browser)
         } else {
