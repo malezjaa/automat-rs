@@ -18,6 +18,7 @@ mod display_macro;
 mod error;
 mod main_loop;
 mod triggers;
+mod window;
 
 pub use actions::*;
 pub use error::*;

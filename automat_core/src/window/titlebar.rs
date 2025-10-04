@@ -1,3 +1,5 @@
+use crate::window::{WindowIdentifier, get_current_window_identifier};
+
 #[cfg(target_os = "windows")]
 /// Retrieves the title of the currently focused window on Windows.
 ///
@@ -16,11 +18,12 @@
 /// # Safety
 ///
 /// Uses unsafe Windows API calls. The buffer size is limited to 512 characters.
-pub fn get_current_window_title() -> Option<String> {
-    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW};
+pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::GetWindowTextW;
 
     unsafe {
-        let hwnd = GetForegroundWindow();
+        let hwnd = HWND(window_id.as_u64() as *mut _);
         let mut title: [u16; 512] = [0; 512];
         let len = GetWindowTextW(hwnd, &mut title);
 
@@ -52,7 +55,7 @@ pub fn get_current_window_title() -> Option<String> {
 ///
 /// Uses unsafe X11 API calls. Properly cleans up resources by closing
 /// the display and freeing allocated memory.
-pub fn get_current_window_title() -> Option<String> {
+pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
     use std::ffi::CStr;
     use std::ptr;
     use x11::xlib::*;
@@ -63,10 +66,7 @@ pub fn get_current_window_title() -> Option<String> {
             return None;
         }
 
-        let mut focus_window: Window = 0;
-        let mut revert_to: i32 = 0;
-        XGetInputFocus(display, &mut focus_window, &mut revert_to);
-
+        let focus_window = window_id.as_u64();
         let mut name: *mut i8 = ptr::null_mut();
         let status = XFetchName(display, focus_window, &mut name);
 
@@ -104,7 +104,7 @@ pub fn get_current_window_title() -> Option<String> {
 ///
 /// Uses unsafe Objective-C message sending. Properly handles nil checks
 /// to prevent null pointer dereferences.
-pub fn get_current_window_title() -> Option<String> {
+pub fn get_window_title() -> Option<String> {
     use cocoa::base::{id, nil};
     use objc::{class, msg_send, sel, sel_impl};
 
@@ -117,13 +117,11 @@ pub fn get_current_window_title() -> Option<String> {
         }
 
         let localized_name: id = msg_send![frontmost_app, localizedName];
-
         if localized_name == nil {
             return None;
         }
 
         let name_ptr: *const i8 = msg_send![localized_name, UTF8String];
-
         if name_ptr.is_null() {
             return None;
         }

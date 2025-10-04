@@ -5,14 +5,10 @@ use tokio::time::sleep;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    new_trigger(vec![IntervalTrigger::new(
-        Duration::from_secs(4),
-        |_| async move {
-            println!("current titlebar {:?}", get_current_window_title());
-            Ok(())
-        },
-    )])
-    .await;
+    new_trigger!(WindowTrigger::new(|id| async move {
+        println!("current window {:?}", get_window_title(id));
+        Ok(())
+    },));
 
     await_shutdown().await
 }

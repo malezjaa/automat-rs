@@ -1,10 +1,12 @@
 mod interval;
+mod window;
 
 use super::error::Result;
 use crate::Action;
 use async_trait::async_trait;
 
 pub use interval::*;
+pub use window::*;
 
 /// Represents a trigger that initiates workflow execution.
 ///
@@ -77,4 +79,11 @@ pub async fn new_trigger(triggers: impl IntoIterator<Item = impl Trigger + 'stat
     for mut trigger in triggers {
         tokio::spawn(async move { trigger.start().await });
     }
+}
+
+#[macro_export]
+macro_rules! new_trigger {
+    ($($trigger:expr),+ $(,)?) => {
+        $crate::new_trigger(vec![$($trigger),+]).await;
+    };
 }
