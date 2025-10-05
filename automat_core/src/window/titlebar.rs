@@ -1,15 +1,15 @@
 use crate::window::{WindowIdentifier, get_current_window_identifier};
 
 #[cfg(target_os = "windows")]
-/// Retrieves the title of the currently focused window on Windows.
+/// Retrieves the title of the specified window on Windows.
 ///
-/// This function uses the Windows API to get the foreground window handle
+/// This function uses the Windows API to get the window handle
 /// and retrieves its title text.
 ///
 /// # Returns
 ///
 /// * `Some(String)` - The window title if successfully retrieved
-/// * `None` - If there is no foreground window or the title is empty
+/// * `None` - If the window doesn't exist or the title is empty
 ///
 /// # Platform
 ///
@@ -36,15 +36,15 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 }
 
 #[cfg(target_os = "linux")]
-/// Retrieves the title of the currently focused window on Linux.
+/// Retrieves the title of the specified window on Linux.
 ///
-/// This function uses X11 (Xlib) to get the input focus window
+/// This function uses X11 (Xlib) to get the window by its identifier
 /// and fetches its name property.
 ///
 /// # Returns
 ///
 /// * `Some(String)` - The window title if successfully retrieved
-/// * `None` - If the X display cannot be opened, there is no focused window,
+/// * `None` - If the X display cannot be opened, the window doesn't exist,
 ///   or the window has no name
 ///
 /// # Platform
@@ -85,7 +85,7 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 }
 
 #[cfg(target_os = "macos")]
-/// Retrieves the name of the currently focused application on macOS.
+/// Retrieves the name of the application on macOS.
 ///
 /// This function uses Cocoa/Objective-C APIs to get the frontmost application
 /// and returns its localized name. Note that this returns the application name,
@@ -107,25 +107,25 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 pub fn get_window_title() -> Option<String> {
     use cocoa::base::{id, nil};
     use objc::{class, msg_send, sel, sel_impl};
-
+    
     unsafe {
         let workspace: id = msg_send![class!(NSWorkspace), sharedWorkspace];
         let frontmost_app: id = msg_send![workspace, frontmostApplication];
-
+        
         if frontmost_app == nil {
             return None;
         }
-
+        
         let localized_name: id = msg_send![frontmost_app, localizedName];
         if localized_name == nil {
             return None;
         }
-
+        
         let name_ptr: *const i8 = msg_send![localized_name, UTF8String];
         if name_ptr.is_null() {
             return None;
         }
-
+        
         let c_str = std::ffi::CStr::from_ptr(name_ptr);
         Some(c_str.to_string_lossy().to_string())
     }

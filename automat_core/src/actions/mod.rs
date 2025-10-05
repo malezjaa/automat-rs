@@ -4,7 +4,6 @@ mod open_in_browser;
 use super::error::Result;
 use async_trait::async_trait;
 
-pub use crate::window::titlebar::*;
 pub use enigo::{Axis, Button, Coordinate, Direction, Key};
 pub use input::*;
 pub use open_in_browser::*;

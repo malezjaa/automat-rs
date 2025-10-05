@@ -24,5 +24,6 @@ pub use actions::*;
 pub use error::*;
 pub use main_loop::*;
 pub use triggers::*;
+pub use window::*;
 
 pub use async_trait::async_trait;
