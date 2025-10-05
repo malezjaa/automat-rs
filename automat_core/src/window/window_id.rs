@@ -19,10 +19,6 @@ impl WindowIdentifier {
 ///
 /// * `Some(WindowIdentifier)` - The window identifier (HWND cast to u64)
 /// * `None` - If there is no foreground window
-///
-/// # Platform
-///
-/// Windows only
 pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
     use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
@@ -43,10 +39,6 @@ pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
 ///
 /// * `Some(WindowIdentifier)` - The window identifier (X11 Window ID)
 /// * `None` - If the X display cannot be opened or there is no focused window
-///
-/// # Platform
-///
-/// Linux only (requires X11)
 pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
     use std::ptr;
     use x11::xlib::*;
@@ -81,10 +73,6 @@ pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
 ///
 /// * `Some(WindowIdentifier)` - The application process ID
 /// * `None` - If there is no frontmost application
-///
-/// # Platform
-///
-/// macOS only
 pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
     use cocoa::base::{id, nil};
     use objc::{class, msg_send, sel, sel_impl};

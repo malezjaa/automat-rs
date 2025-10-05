@@ -8,6 +8,9 @@ pub enum Error {
 
     #[error("Input error: {0}")]
     InputError(#[from] InputError),
+
+    #[error("Window state error: {0}")]
+    WindowStateError(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

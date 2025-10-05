@@ -10,10 +10,6 @@ use crate::WindowIdentifier;
 /// * `Some((u32, u32))` - The window size (width, height) if successfully retrieved
 /// * `None` - If the window handle is invalid, or the API call fails
 ///
-/// # Platform
-///
-/// Windows only
-///
 /// # Safety
 ///
 /// Uses unsafe Windows API calls with raw HWND handles.
@@ -45,10 +41,6 @@ pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
 ///
 /// * `Some((u32, u32))` - The window size (width, height) if successfully retrieved
 /// * `None` - If the window ID is invalid, or the API call fails
-///
-/// # Platform
-///
-/// Linux only (X11)
 ///
 /// # Safety
 ///
@@ -87,10 +79,6 @@ pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
 ///
 /// * `Some((u32, u32))` - The window size (width, height) if successfully retrieved
 /// * `None` - If the window ID is invalid, or the API call fails
-///
-/// # Platform
-///
-/// macOS only
 pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
     use core_graphics::window::{CGWindowListCopyWindowInfo, kCGWindowListOptionIncludingWindow, kCGNullWindowID};
     use core_foundation::dictionary::CFDictionary;

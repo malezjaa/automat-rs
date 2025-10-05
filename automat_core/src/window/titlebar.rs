@@ -11,10 +11,6 @@ use crate::window::{WindowIdentifier, get_current_window_identifier};
 /// * `Some(String)` - The window title if successfully retrieved
 /// * `None` - If the window doesn't exist or the title is empty
 ///
-/// # Platform
-///
-/// Windows only
-///
 /// # Safety
 ///
 /// Uses unsafe Windows API calls. The buffer size is limited to 512 characters.
@@ -46,10 +42,6 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 /// * `Some(String)` - The window title if successfully retrieved
 /// * `None` - If the X display cannot be opened, the window doesn't exist,
 ///   or the window has no name
-///
-/// # Platform
-///
-/// Linux only (requires X11)
 ///
 /// # Safety
 ///
@@ -96,10 +88,6 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 /// * `Some(String)` - The application name if successfully retrieved
 /// * `None` - If there is no frontmost application or the name cannot be retrieved
 ///
-/// # Platform
-///
-/// macOS only
-///
 /// # Safety
 ///
 /// Uses unsafe Objective-C message sending. Properly handles nil checks
@@ -107,25 +95,25 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 pub fn get_window_title() -> Option<String> {
     use cocoa::base::{id, nil};
     use objc::{class, msg_send, sel, sel_impl};
-    
+
     unsafe {
         let workspace: id = msg_send![class!(NSWorkspace), sharedWorkspace];
         let frontmost_app: id = msg_send![workspace, frontmostApplication];
-        
+
         if frontmost_app == nil {
             return None;
         }
-        
+
         let localized_name: id = msg_send![frontmost_app, localizedName];
         if localized_name == nil {
             return None;
         }
-        
+
         let name_ptr: *const i8 = msg_send![localized_name, UTF8String];
         if name_ptr.is_null() {
             return None;
         }
-        
+
         let c_str = std::ffi::CStr::from_ptr(name_ptr);
         Some(c_str.to_string_lossy().to_string())
     }
