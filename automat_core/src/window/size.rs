@@ -46,12 +46,12 @@ pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
 ///
 /// Uses unsafe X11 API calls. Requires X11 display connection.
 pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
-    use x11::xlib::{XGetWindowAttributes, XOpenDisplay, XWindowAttributes, XCloseDisplay};
-    use std::ptr::null_mut;
+    use x11::xlib::{XCloseDisplay, XGetWindowAttributes, XOpenDisplay, XWindowAttributes};
     use std::mem::zeroed;
+    use std::ptr;
 
     unsafe {
-        let display = XOpenDisplay(null_mut());
+        let display = XOpenDisplay(ptr::null());
         if display.is_null() {
             return None;
         }
@@ -80,11 +80,12 @@ pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
 /// * `Some((u32, u32))` - The window size (width, height) if successfully retrieved
 /// * `None` - If the window ID is invalid, or the API call fails
 pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
-    use core_graphics::window::{CGWindowListCopyWindowInfo, kCGWindowListOptionIncludingWindow, kCGNullWindowID};
-    use core_foundation::dictionary::CFDictionary;
+    use core_graphics::window::{CGWindowListCopyWindowInfo, kCGWindowListOptionIncludingWindow};
+    use core_foundation::array::CFArray;
     use core_foundation::base::TCFType;
-    use core_foundation::string::CFString;
+    use core_foundation::dictionary::CFDictionary;
     use core_foundation::number::CFNumber;
+    use core_foundation::string::CFString;
 
     unsafe {
         let window_list = CGWindowListCopyWindowInfo(

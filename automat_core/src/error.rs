@@ -11,6 +11,9 @@ pub enum Error {
 
     #[error("Window state error: {0}")]
     WindowStateError(String),
+
+    #[error("Window list error: {0}")]
+    WindowListError(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

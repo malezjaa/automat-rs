@@ -1,6 +1,29 @@
 use crate::Error::WindowStateError;
 use crate::{Error, Result, WindowIdentifier};
 
+#[cfg(target_os = "windows")]
+/// Checks if a window is visible on Windows.
+///
+/// This is a lightweight helper function that only checks visibility
+/// without retrieving the full window state.
+///
+/// # Returns
+///
+/// `true` if the window is visible, `false` otherwise
+///
+/// # Safety
+///
+/// Uses unsafe Windows API calls with raw HWND handles.
+pub fn is_window_visible(window_id: WindowIdentifier) -> bool {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::IsWindowVisible;
+
+    unsafe {
+        let hwnd = HWND(window_id.as_u64() as *mut _);
+        IsWindowVisible(hwnd).as_bool()
+    }
+}
+
 /// Represents the state of a window across all platforms.
 ///
 /// This struct provides a unified interface for window states on Windows, macOS, and Linux.
