@@ -75,7 +75,7 @@ pub trait Trigger: Send + Sync {
 }
 
 /// Spawns new threads with the trigger instances running on them.
-pub async fn new_trigger(triggers: impl IntoIterator<Item = impl Trigger + 'static>) {
+pub async fn new_trigger(triggers: Vec<Box<dyn Trigger>>) {
     for mut trigger in triggers {
         tokio::spawn(async move { trigger.start().await });
     }
@@ -84,6 +84,6 @@ pub async fn new_trigger(triggers: impl IntoIterator<Item = impl Trigger + 'stat
 #[macro_export]
 macro_rules! new_trigger {
     ($($trigger:expr),+ $(,)?) => {
-        $crate::new_trigger(vec![$($trigger),+]).await;
+        $crate::new_trigger(vec![$(Box::new($trigger) as Box<dyn Trigger>),+]).await;
     };
 }

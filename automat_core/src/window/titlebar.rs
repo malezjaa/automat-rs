@@ -77,22 +77,22 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 }
 
 #[cfg(target_os = "macos")]
-/// Retrieves the name of the application on macOS.
+/// Retrieves the title of the specified window on macOS.
 ///
-/// This function uses Cocoa/Objective-C APIs to get the frontmost application
-/// and returns its localized name. Note that this returns the application name,
-/// not the window title.
+/// This function uses Cocoa/Objective-C APIs to get the window information.
+/// Note: On macOS, if the window_id doesn't correspond to an actual window,
+/// this returns the application name of the frontmost application.
 ///
 /// # Returns
 ///
-/// * `Some(String)` - The application name if successfully retrieved
-/// * `None` - If there is no frontmost application or the name cannot be retrieved
+/// * `Some(String)` - The window title or application name if successfully retrieved
+/// * `None` - If there is no window or application or the name cannot be retrieved
 ///
 /// # Safety
 ///
 /// Uses unsafe Objective-C message sending. Properly handles nil checks
 /// to prevent null pointer dereferences.
-pub fn get_window_title() -> Option<String> {
+pub fn get_window_title(_window_id: WindowIdentifier) -> Option<String> {
     use cocoa::base::{id, nil};
     use objc::{class, msg_send, sel, sel_impl};
 

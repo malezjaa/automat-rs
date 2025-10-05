@@ -1,51 +1,33 @@
+use crate::{Error, Result, Window, WindowIdentifier};
 use windows::core::BOOL;
-use crate::{Error, Result, WindowIdentifier};
-
-#[derive(Debug, Clone)]
-pub struct WindowInfo {
-    pub id: WindowIdentifier,
-    pub title: String,
-}
 
 #[cfg(target_os = "windows")]
 /// Lists all open windows on Windows.
 ///
 /// This function lists all top-level windows using the Windows API
-/// and collects their window handles and titles.
+/// and collects their window handles.
 ///
 /// # Returns
 ///
-/// * `Result<Vec<WindowInfo>>` - A vector of window information including
-///   window IDs and titles, or an error if enumeration fails
+/// * `Result<Vec<Window>>` - A vector of windows, or an error if enumeration fails
 ///
 /// # Safety
 ///
 /// Uses unsafe Windows API calls for window enumeration.
-pub fn list_windows() -> Result<Vec<WindowInfo>> {
+pub fn list_windows() -> Result<Vec<Window>> {
+    use crate::window::is_window_visible;
     use windows::Win32::Foundation::{HWND, LPARAM};
     use windows::Win32::UI::WindowsAndMessaging::EnumWindows;
-    use crate::window::get_window_title;
-    use crate::window::is_window_visible;
 
     let mut windows = Vec::new();
 
-    unsafe extern "system" fn enum_window_proc(
-        hwnd: HWND,
-        lparam: LPARAM,
-    ) -> BOOL {
+    unsafe extern "system" fn enum_window_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
         unsafe {
-            let windows = &mut *(lparam.0 as *mut Vec<WindowInfo>);
+            let windows = &mut *(lparam.0 as *mut Vec<Window>);
             let window_id = WindowIdentifier::new(hwnd.0 as u64);
 
             if is_window_visible(window_id) {
-                if let Some(title) = get_window_title(window_id) {
-                    if !title.is_empty() {
-                        windows.push(WindowInfo {
-                            id: window_id,
-                            title,
-                        });
-                    }
-                }
+                windows.push(Window { id: window_id });
             }
 
             true.into()
@@ -69,18 +51,15 @@ pub fn list_windows() -> Result<Vec<WindowInfo>> {
 ///
 /// # Returns
 ///
-/// * `Result<Vec<WindowInfo>>` - A vector of window information including
-///   window IDs and titles, or an error if the X11 connection fails
+/// * `Result<Vec<Window>>` - A vector of windows, or an error if the X11 connection fails
 ///
 /// # Safety
 ///
 /// Uses unsafe X11 API calls for display connection and window queries.
-pub fn list_windows() -> Result<Vec<WindowInfo>> {
-    use std::ptr;
-    use x11::xlib::{
-        Display, Window, XCloseDisplay, XFree, XOpenDisplay, XQueryTree, XRootWindow,
-    };
+pub fn list_windows() -> Result<Vec<Window>> {
     use crate::window::get_window_title;
+    use std::ptr;
+    use x11::xlib::{Display, Window, XCloseDisplay, XFree, XOpenDisplay, XQueryTree, XRootWindow};
 
     unsafe {
         let display = XOpenDisplay(ptr::null());
@@ -111,14 +90,7 @@ pub fn list_windows() -> Result<Vec<WindowInfo>> {
                 let window = *children.offset(i as isize);
                 let window_id = WindowIdentifier::new(window as u64);
 
-                if let Some(title) = get_window_title(window_id) {
-                    if !title.is_empty() {
-                        windows.push(WindowInfo {
-                            id: window_id,
-                            title,
-                        });
-                    }
-                }
+                windows.push(Window { id: window_id });
             }
 
             if !children.is_null() {
@@ -140,19 +112,18 @@ pub fn list_windows() -> Result<Vec<WindowInfo>> {
 ///
 /// # Returns
 ///
-/// * `Result<Vec<WindowInfo>>` - A vector of window information including
-///   window IDs and titles, or an error if the query fails
+/// * `Result<Vec<Window>>` - A vector of windows, or an error if the query fails
 ///
 /// # Safety
 ///
 /// Uses unsafe Objective-C and Core Foundation API calls.
-pub fn list_windows() -> Result<Vec<WindowInfo>> {
+pub fn list_windows() -> Result<Vec<Window>> {
     use core_foundation::array::{CFArray, CFArrayRef};
     use core_foundation::base::{CFType, TCFType};
     use core_foundation::dictionary::{CFDictionary, CFDictionaryRef};
     use core_foundation::number::CFNumber;
     use core_foundation::string::{CFString, CFStringRef};
-    use core_graphics::window::{CGWindowListCopyWindowInfo, kCGWindowListOptionOnScreenOnly};
+    use core_graphics::window::{kCGWindowListOptionOnScreenOnly, CGWindowListCopyWindowInfo};
 
     unsafe {
         let window_list_info = CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, 0);
@@ -176,16 +147,7 @@ pub fn list_windows() -> Result<Vec<WindowInfo>> {
                     let layer: CFNumber = TCFType::wrap_under_get_rule(*layer_ref as *const _);
                     if let Some(layer_value) = layer.to_i32() {
                         if layer_value == 0 {
-                            let mut title = String::new();
                             let mut window_id = 0u64;
-
-                            if let Some(name_ref) =
-                                dict.find(&window_name_key as *const _ as *const _)
-                            {
-                                let name: CFString =
-                                    TCFType::wrap_under_get_rule(*name_ref as CFStringRef);
-                                title = name.to_string();
-                            }
 
                             if let Some(number_ref) =
                                 dict.find(&window_number_key as *const _ as *const _)
@@ -197,10 +159,9 @@ pub fn list_windows() -> Result<Vec<WindowInfo>> {
                                 }
                             }
 
-                            if !title.is_empty() && window_id != 0 {
-                                windows.push(WindowInfo {
+                            if window_id != 0 {
+                                windows.push(Window {
                                     id: WindowIdentifier::new(window_id),
-                                    title,
                                 });
                             }
                         }
