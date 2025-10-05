@@ -14,6 +14,9 @@ pub enum Error {
 
     #[error("Window list error: {0}")]
     WindowListError(String),
+
+    #[error("Clipboard error: {0}")]
+    ClipboardError(arboard::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

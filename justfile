@@ -25,3 +25,6 @@ audit:
 test:
     @echo "Running tests..."
     cargo test --workspace --all-features
+
+doc:
+    cargo doc --no-deps

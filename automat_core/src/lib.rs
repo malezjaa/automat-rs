@@ -14,6 +14,7 @@
 
 mod actions;
 mod callback;
+mod clipboard;
 mod display_macro;
 mod error;
 mod main_loop;
@@ -21,6 +22,7 @@ mod triggers;
 mod window;
 
 pub use actions::*;
+pub use clipboard::*;
 pub use error::*;
 pub use main_loop::*;
 pub use triggers::*;
