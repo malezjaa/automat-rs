@@ -1,3 +1,4 @@
+use display_info::error::DIError;
 use enigo::InputError;
 use thiserror::Error;
 
@@ -16,7 +17,10 @@ pub enum Error {
     WindowListError(String),
 
     #[error("Clipboard error: {0}")]
-    ClipboardError(arboard::Error),
+    ClipboardError(#[from] arboard::Error),
+
+    #[error("DIError: {0}")]
+    DIError(#[from] DIError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
