@@ -1,11 +1,10 @@
-use crate::{async_callback, impl_display_debug, new_interval_callback, Result, Trigger};
+use crate::{callback, impl_display_debug, Result, Trigger};
 use async_trait::async_trait;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
-use std::pin::Pin;
 use std::sync::mpsc;
 
-async_callback!(FileSystemCallback<T>);
+callback!(FileSystemCallback<T>);
 
 /// A trigger that watches for file system events and executes a callback when events occur.
 ///
@@ -23,14 +22,13 @@ impl FileSystemTrigger {
     ///
     /// # Arguments
     ///
-    /// * `f` - An async callback function that receives file system events and returns a `Result`.
-    pub fn new<F, Fut>(f: F) -> Self
+    /// * `f` - A sync callback function that receives file system events and returns a `Result`.
+    pub fn new<F>(f: F) -> Self
     where
-        F: Fn(Result<Event>) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
+        F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
     {
         Self {
-            callback: new_interval_callback(f),
+            callback: new_file_system_callback(f),
             config: None,
             watch_paths: Vec::new(),
         }
@@ -79,7 +77,7 @@ impl Trigger for FileSystemTrigger {
     /// Each file system event triggers the registered callback.
     async fn start(&mut self) -> Result<()> {
         if self.watch_paths.is_empty() {
-            return Ok(())
+            return Ok(());
         }
 
         let (tx, rx) = mpsc::channel();
@@ -90,7 +88,7 @@ impl Trigger for FileSystemTrigger {
         }
 
         for res in rx {
-            (self.callback)(res.map_err(Into::into)).await?;
+            (self.callback)(res.map_err(Into::into))?;
         }
 
         Ok(())

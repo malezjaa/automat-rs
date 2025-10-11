@@ -1,12 +1,10 @@
-use crate::window::{WindowIdentifier, get_current_window_identifier};
-use crate::{Action, ActionAsync, Result, Trigger, async_callback, impl_display_debug, new_interval_callback, Window};
+use crate::window::get_current_window_identifier;
+use crate::{callback, Result, Trigger, Window};
 use async_trait::async_trait;
-use std::future::Future;
-use std::pin::Pin;
 use std::time::Duration;
 use tokio::time::interval;
 
-async_callback!(WindowChangeCallback<T>);
+callback!(WindowChangeCallback<T>);
 
 /// WindowTrigger trigger when the current window changes.
 pub struct WindowTrigger {
@@ -15,14 +13,13 @@ pub struct WindowTrigger {
 }
 
 impl WindowTrigger {
-    pub fn new<F, Fut>(f: F) -> Self
+    pub fn new<F>(f: F) -> Self
     where
-        F: Fn(Window) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
+        F: Fn(Window) -> Result<()> + Send + Sync + 'static,
     {
         Self {
             last_window: None,
-            callback: new_interval_callback(f),
+            callback: new_window_change_callback(f),
         }
     }
 }
@@ -38,7 +35,7 @@ impl Trigger for WindowTrigger {
                 let new_window = Window::new(window);
                 if self.last_window.as_ref() != Some(&new_window) {
                     self.last_window = Some(new_window.clone());
-                    (self.callback)(new_window).await?;
+                    (self.callback)(new_window)?;
                 }
             }
         }

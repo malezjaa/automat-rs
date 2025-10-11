@@ -4,8 +4,9 @@ use automat_core::*;
 async fn main() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    new_trigger!(
-        FileSystemTrigger::new(|event| async move {
+    println!(
+        "{:?}",
+        FileSystemTrigger::new(|event| {
             println!("Change: {event:?}");
             Ok(())
         })

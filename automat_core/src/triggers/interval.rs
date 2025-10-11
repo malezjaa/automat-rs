@@ -1,10 +1,9 @@
-use crate::{async_callback, impl_display_debug, ActionAsync, Result, Trigger};
+use crate::{callback, impl_display_debug, ActionAsync, Result, Trigger};
 use async_trait::async_trait;
-use std::pin::Pin;
 use std::time::Duration;
 use tokio::time::interval;
 
-async_callback!(IntervalCallback<T>);
+callback!(IntervalCallback<T>);
 
 /// IntervalTrigger yields at a fixed time period.
 ///
@@ -15,10 +14,9 @@ pub struct IntervalTrigger {
 }
 
 impl IntervalTrigger {
-    pub fn new<F, Fut>(interval: Duration, f: F) -> Self
+    pub fn new<F>(interval: Duration, f: F) -> Self
     where
-        F: Fn(Duration) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
+        F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
     {
         Self {
             interval,
@@ -31,8 +29,8 @@ impl IntervalTrigger {
         self.interval
     }
 
-    pub async fn call(&self) -> Result<()> {
-        (self.callback)(self.interval).await
+    pub fn call(&self) -> Result<()> {
+        (self.callback)(self.interval)
     }
 }
 
@@ -40,7 +38,7 @@ impl IntervalTrigger {
 /// Action just calls provided callback.
 impl ActionAsync for IntervalTrigger {
     async fn run_async(&self) -> Result<()> {
-        self.call().await
+        self.call()
     }
 }
 
