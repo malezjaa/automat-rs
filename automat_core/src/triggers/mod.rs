@@ -1,3 +1,4 @@
+mod fs_watcher;
 mod interval;
 mod window;
 
@@ -5,6 +6,7 @@ use super::error::Result;
 use crate::Action;
 use async_trait::async_trait;
 
+pub use fs_watcher::*;
 pub use interval::*;
 pub use window::*;
 

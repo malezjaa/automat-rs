@@ -21,6 +21,9 @@ pub enum Error {
 
     #[error("DIError: {0}")]
     DIError(#[from] DIError),
+
+    #[error("Notify Error: {0}")]
+    NotifyError(#[from] notify::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
