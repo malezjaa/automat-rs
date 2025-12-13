@@ -13,6 +13,7 @@
 //! and reliable automation across the entire ecosystem.
 
 mod actions;
+mod automat;
 mod callback;
 mod clipboard;
 mod display_macro;
@@ -22,6 +23,7 @@ mod triggers;
 mod window;
 
 pub use actions::*;
+pub use automat::*;
 pub use clipboard::*;
 pub use error::*;
 pub use main_loop::*;

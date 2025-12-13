@@ -2,15 +2,18 @@ use automat_core::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let cwd = std::env::current_dir()?;
-
-    println!(
-        "{:?}",
-        FileSystemTrigger::new(|event| {
-            println!("Change: {event:?}");
+    Automat::new()
+        .on_process(|event| {
+            match event {
+                ProcessEvent::Started(st) => {
+                    println!("Process started {}", st.name);
+                }
+                ProcessEvent::Exited(ex) => {
+                    println!("Process exited: {}", ex.name);
+                }
+            }
             Ok(())
         })
-        .watch_path(cwd, true)
-    );
-    await_shutdown().await
+        .run()
+        .await
 }

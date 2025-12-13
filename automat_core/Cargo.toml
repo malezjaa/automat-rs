@@ -17,12 +17,14 @@ once_cell = "1.21.3"
 arboard = "3.6.1"
 display-info = "0.5.6"
 notify = "8.2.0"
+sysinfo = "0.37.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62.1", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
-    "Win32_System_Console"
+    "Win32_System_Console",
+    "Win32_System_Diagnostics_Etw"
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

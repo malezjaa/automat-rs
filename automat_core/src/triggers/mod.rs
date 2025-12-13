@@ -1,5 +1,6 @@
 mod fs_watcher;
 mod interval;
+mod process;
 mod window;
 
 use super::error::Result;
@@ -8,6 +9,7 @@ use async_trait::async_trait;
 
 pub use fs_watcher::*;
 pub use interval::*;
+pub use process::*;
 pub use window::*;
 
 /// Represents a trigger that initiates workflow execution.
@@ -84,7 +86,7 @@ pub async fn new_trigger(triggers: Vec<Box<dyn Trigger>>) {
 }
 
 #[macro_export]
-macro_rules! new_trigger {
+macro_rules! trigger {
     ($($trigger:expr),+ $(,)?) => {
         $crate::new_trigger(vec![$(Box::new($trigger) as Box<dyn Trigger>),+]).await;
     };
