@@ -2,8 +2,6 @@ use crate::triggers::context::send_error;
 use crate::{callback, pair_api, Result, Trigger, TriggerRuntime, Window};
 use async_trait::async_trait;
 
-use std::future::Future;
-
 callback!(WindowChangeCallback<T>);
 
 /// WindowTrigger trigger when the current window changes.
@@ -15,17 +13,10 @@ pub struct WindowTrigger {
 impl WindowTrigger {
   pair_api! {
     assoc
-      new<F, Fut>(f: F)
-        where {
-          F: Fn(Window) -> Fut + Send + Sync + 'static,
-          Fut: Future<Output = Result<()>> + Send + 'static,
-        }
-        => Self { last_window: None, callback: new_window_change_callback(f) };
-      new_blocking<F>(f: F)
-        where {
-          F: Fn(Window) -> Result<()> + Send + Sync + 'static,
-        }
-        => Self { last_window: None, callback: new_window_change_callback_blocking(f) };
+      new(f: F)
+        callback(Window)
+        async => Self { last_window: None, callback: new_window_change_callback(f) };
+        blocking => Self { last_window: None, callback: new_window_change_callback_blocking(f) };
   }
 }
 

@@ -1,23 +1,21 @@
 /// Generates an async-first API and a blocking variant.
 ///
 /// Two modes:
-///
 /// - `method`: emits builder-style methods that push a trigger and return `Self`.
 /// - `assoc`: emits associated fns returning `Self`.
+///
+/// The simplified forms take a single definition and generate the `_blocking` variant
+/// automatically. You specify the callback signature via `callback(...)`.
 ///
 /// # Example (method)
 ///
 /// ```ignore
 /// pair_api! {
 ///   method
-///     /// Async-first.
-///     on_interval<F, Fut>(interval: Duration, f: F)
-///       where { F: Fn(Duration) -> Fut + Send + Sync + 'static, Fut: Future<Output = Result<()>> + Send + 'static }
-///       => IntervalTrigger::new(interval, f);
-///     /// Blocking.
-///     on_interval_blocking<F>(interval: Duration, f: F)
-///       where { F: Fn(Duration) -> Result<()> + Send + Sync + 'static }
-///       => IntervalTrigger::new_blocking(interval, f);
+///     /// Async-first. Blocking variant is auto-generated as `on_interval_blocking`.
+///     on_interval(interval: Duration, f: F)
+///       callback(Duration)
+///       => (IntervalTrigger)::new(interval, f);
 /// }
 /// ```
 ///
@@ -26,73 +24,145 @@
 /// ```ignore
 /// pair_api! {
 ///   assoc
-///     new<F, Fut>(arg: T, f: F)
-///       where { F: Fn(T) -> Fut + Send + Sync + 'static, Fut: Future<Output = Result<()>> + Send + 'static }
-///       => Self { /* ... */ };
-///     new_blocking<F>(arg: T, f: F)
-///       where { F: Fn(T) -> Result<()> + Send + Sync + 'static }
-///       => Self { /* ... */ };
+///     /// Async-first.
+///     new(arg: T, f: F)
+///       callback(T)
+///       async => Self { /* ... */ };
+///       /// Blocking.
+///       blocking => Self { /* ... */ };
 /// }
 /// ```
 #[macro_export]
 macro_rules! pair_api {
+  // --- Shorthand forms (single definition, auto-generates `_blocking`) ---
+  //
+  // These forms aim to remove the repetitive `<F, Fut>` + `where { ... }` boilerplate.
+  // You provide:
+  // - the function signature (must include `f: F`)
+  // - the callback input types via `callback(...)`
+  // - either:
+  //   - a base ctor path `Ty::ctor(...)` (blocking uses `Ty::ctor_blocking(...)`), OR
+  //   - explicit `async => ...; blocking => ...;` bodies.
+
   (
     method
       $(#[$doc_async:meta])*
-      $async_name:ident<$($gen_async:ident),+>($($args_async:tt)*)
-        where { $($where_async:tt)* }
-        => $ctor_async:expr;
-      $(#[$doc_block:meta])*
-      $block_name:ident<$($gen_block:ident),+>($($args_block:tt)*)
-        where { $($where_block:tt)* }
-        => $ctor_block:expr;
+      $name:ident($($args:tt)*)
+        callback ( $($cb_args:ty),* $(,)? )
+        => ( $ty:path ) :: $ctor:ident ( $($ctor_args:tt)* );
   ) => {
-    $(#[$doc_async])*
-    pub fn $async_name<$($gen_async),+>(mut self, $($args_async)*) -> Self
-    where
-      $($where_async)*
-    {
-      let trigger = $ctor_async;
-      self.triggers.push(Box::new(trigger));
-      self
-    }
+    ::paste::paste! {
+      $(#[$doc_async])*
+      pub fn $name<F, Fut>(mut self, $($args)*) -> Self
+      where
+        F: Fn($($cb_args),*) -> Fut + Send + Sync + 'static,
+        Fut: ::std::future::Future<Output = $crate::Result<()>> + Send + 'static,
+      {
+        let trigger = $ty::$ctor($($ctor_args)*);
+        self.triggers.push(Box::new(trigger));
+        self
+      }
 
-    $(#[$doc_block])*
-    pub fn $block_name<$($gen_block),+>(mut self, $($args_block)*) -> Self
-    where
-      $($where_block)*
-    {
-      let trigger = $ctor_block;
-      self.triggers.push(Box::new(trigger));
-      self
+      #[doc = concat!("Blocking variant of `", stringify!($name), "`.")]
+      pub fn [<$name _blocking>]<F>(mut self, $($args)*) -> Self
+      where
+        F: Fn($($cb_args),*) -> $crate::Result<()> + Send + Sync + 'static,
+      {
+        let trigger = $ty::[<$ctor _blocking>]($($ctor_args)*);
+        self.triggers.push(Box::new(trigger));
+        self
+      }
     }
   };
 
   (
     assoc
       $(#[$doc_async:meta])*
-      $async_name:ident<$($gen_async:ident),+>($($args_async:tt)*)
-        where { $($where_async:tt)* }
-        => $body_async:expr;
-      $(#[$doc_block:meta])*
-      $block_name:ident<$($gen_block:ident),+>($($args_block:tt)*)
-        where { $($where_block:tt)* }
-        => $body_block:expr;
+      $name:ident($($args:tt)*)
+        callback ( $($cb_args:ty),* $(,)? )
+        => ( $ty:path ) :: $ctor:ident ( $($ctor_args:tt)* );
   ) => {
-    $(#[$doc_async])*
-    pub fn $async_name<$($gen_async),+>($($args_async)*) -> Self
-    where
-      $($where_async)*
-    {
-      $body_async
-    }
+    ::paste::paste! {
+      $(#[$doc_async])*
+      pub fn $name<F, Fut>($($args)*) -> Self
+      where
+        F: Fn($($cb_args),*) -> Fut + Send + Sync + 'static,
+        Fut: ::std::future::Future<Output = $crate::Result<()>> + Send + 'static,
+      {
+        $ty::$ctor($($ctor_args)*)
+      }
 
-    $(#[$doc_block])*
-    pub fn $block_name<$($gen_block),+>($($args_block)*) -> Self
-    where
-      $($where_block)*
-    {
-      $body_block
+      #[doc = concat!("Blocking variant of `", stringify!($name), "`.")]
+      pub fn [<$name _blocking>]<F>($($args)*) -> Self
+      where
+        F: Fn($($cb_args),*) -> $crate::Result<()> + Send + Sync + 'static,
+      {
+        $ty::[<$ctor _blocking>]($($ctor_args)*)
+      }
+    }
+  };
+
+  (
+    method
+      $(#[$doc_async:meta])*
+      $name:ident($($args:tt)*)
+        callback ( $($cb_args:ty),* $(,)? )
+        async => $body_async:expr;
+        $(#[$doc_block:meta])*
+        blocking => $body_block:expr;
+  ) => {
+    ::paste::paste! {
+      $(#[$doc_async])*
+      pub fn $name<F, Fut>(mut self, $($args)*) -> Self
+      where
+        F: Fn($($cb_args),*) -> Fut + Send + Sync + 'static,
+        Fut: ::std::future::Future<Output = $crate::Result<()>> + Send + 'static,
+      {
+        let trigger = $body_async;
+        self.triggers.push(Box::new(trigger));
+        self
+      }
+
+      $(#[$doc_block])*
+      #[doc = concat!("Blocking variant of `", stringify!($name), "`.")]
+      pub fn [<$name _blocking>]<F>(mut self, $($args)*) -> Self
+      where
+        F: Fn($($cb_args),*) -> $crate::Result<()> + Send + Sync + 'static,
+      {
+        let trigger = $body_block;
+        self.triggers.push(Box::new(trigger));
+        self
+      }
+    }
+  };
+
+  (
+    assoc
+      $(#[$doc_async:meta])*
+      $name:ident($($args:tt)*)
+        callback ( $($cb_args:ty),* $(,)? )
+        async => $body_async:expr;
+        $(#[$doc_block:meta])*
+        blocking => $body_block:expr;
+  ) => {
+    ::paste::paste! {
+      $(#[$doc_async])*
+      pub fn $name<F, Fut>($($args)*) -> Self
+      where
+        F: Fn($($cb_args),*) -> Fut + Send + Sync + 'static,
+        Fut: ::std::future::Future<Output = $crate::Result<()>> + Send + 'static,
+      {
+        $body_async
+      }
+
+      $(#[$doc_block])*
+      #[doc = concat!("Blocking variant of `", stringify!($name), "`.")]
+      pub fn [<$name _blocking>]<F>($($args)*) -> Self
+      where
+        F: Fn($($cb_args),*) -> $crate::Result<()> + Send + Sync + 'static,
+      {
+        $body_block
+      }
     }
   };
 }

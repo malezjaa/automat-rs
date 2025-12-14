@@ -8,7 +8,6 @@ use crate::{
   Trigger, TriggerContext, Window, WindowTrigger,
 };
 use notify::Event;
-use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -39,86 +38,41 @@ impl Automat {
   pair_api! {
     method
     /// Monitor process starts and exits.
-    on_process<F, Fut>(f: F)
-      where {
-        F: Fn(TriggerContext<ProcessEvent>) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
-      }
-      => ProcessTrigger::new(f);
-    /// Monitor process starts and exits with a synchronous (blocking) callback.
-    on_process_blocking<F>(f: F)
-      where {
-        F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
-      }
-      => ProcessTrigger::new_blocking(f);
+    on_process(f: F)
+      callback(TriggerContext<ProcessEvent>)
+      => (ProcessTrigger)::new(f);
   }
 
   pair_api! {
     method
     /// Monitor process starts and exits with a custom polling interval.
-    on_process_with_interval<F, Fut>(f: F, interval: Duration)
-      where {
-        F: Fn(TriggerContext<ProcessEvent>) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
-      }
-      => ProcessTrigger::with_interval(f, interval);
-    /// Monitor process starts and exits with a custom polling interval (blocking callback).
-    on_process_with_interval_blocking<F>(f: F, interval: Duration)
-      where {
-        F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
-      }
-      => ProcessTrigger::with_interval_blocking(f, interval);
+    on_process_with_interval(f: F, interval: Duration)
+      callback(TriggerContext<ProcessEvent>)
+      => (ProcessTrigger)::with_interval(f, interval);
   }
 
   pair_api! {
     method
     /// Run a callback at regular intervals.
-    on_interval<F, Fut>(interval: Duration, f: F)
-      where {
-        F: Fn(Duration) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
-      }
-      => IntervalTrigger::new(interval, f);
-    /// Run a callback at regular intervals (blocking callback).
-    on_interval_blocking<F>(interval: Duration, f: F)
-      where {
-        F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
-      }
-      => IntervalTrigger::new_blocking(interval, f);
+    on_interval(interval: Duration, f: F)
+      callback(Duration)
+      => (IntervalTrigger)::new(interval, f);
   }
 
   pair_api! {
     method
     /// Detect when the focused window changes.
-    on_window_focus<F, Fut>(f: F)
-      where {
-        F: Fn(Window) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
-      }
-      => WindowTrigger::new(f);
-    /// Detect when the focused window changes (blocking callback).
-    on_window_focus_blocking<F>(f: F)
-      where {
-        F: Fn(Window) -> Result<()> + Send + Sync + 'static,
-      }
-      => WindowTrigger::new_blocking(f);
+    on_window_focus(f: F)
+      callback(Window)
+      => (WindowTrigger)::new(f);
   }
 
   pair_api! {
     method
     /// Monitor filesystem changes.
-    on_fs_watch<F, Fut>(f: F)
-      where {
-        F: Fn(Result<Event>) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
-      }
-      => FileSystemTrigger::new(f);
-    /// Monitor filesystem changes (blocking callback).
-    on_fs_watch_blocking<F>(f: F)
-      where {
-        F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
-      }
-      => FileSystemTrigger::new_blocking(f);
+    on_fs_watch(f: F)
+      callback(Result<Event>)
+      => (FileSystemTrigger)::new(f);
   }
 
   /// Configure a file system watcher using a builder pattern.

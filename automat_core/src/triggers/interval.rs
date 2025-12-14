@@ -3,8 +3,6 @@ use crate::{callback, impl_display_debug, pair_api, ActionAsync, Result, Trigger
 use async_trait::async_trait;
 use std::time::Duration;
 
-use std::future::Future;
-
 callback!(IntervalCallback<T>);
 
 /// IntervalTrigger yields at a fixed time period.
@@ -18,17 +16,10 @@ pub struct IntervalTrigger {
 impl IntervalTrigger {
   pair_api! {
     assoc
-      new<F, Fut>(interval: Duration, f: F)
-        where {
-          F: Fn(Duration) -> Fut + Send + Sync + 'static,
-          Fut: Future<Output = Result<()>> + Send + 'static,
-        }
-        => Self { interval, callback: new_interval_callback(f) };
-      new_blocking<F>(interval: Duration, f: F)
-        where {
-          F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
-        }
-        => Self { interval, callback: new_interval_callback_blocking(f) };
+      new(interval: Duration, f: F)
+        callback(Duration)
+        async => Self { interval, callback: new_interval_callback(f) };
+        blocking => Self { interval, callback: new_interval_callback_blocking(f) };
   }
 
   #[inline(always)]

@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use std::collections::HashMap;
-use std::future::Future;
 use std::time::Duration;
 use sysinfo::{ProcessesToUpdate, System};
 use tokio::sync::mpsc::Sender;
@@ -37,32 +36,18 @@ pub struct ProcessTrigger {
 impl ProcessTrigger {
   pair_api! {
     assoc
-      new<F, Fut>(f: F)
-        where {
-          F: Fn(TriggerContext<ProcessEvent>) -> Fut + Send + Sync + 'static,
-          Fut: Future<Output = Result<()>> + Send + 'static,
-        }
-        => Self::with_interval(f, Duration::from_millis(500));
-      new_blocking<F>(f: F)
-        where {
-          F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
-        }
-        => Self::with_interval_blocking(f, Duration::from_millis(500));
+      new(f: F)
+        callback(TriggerContext<ProcessEvent>)
+        async => Self::with_interval(f, Duration::from_millis(500));
+        blocking => Self::with_interval_blocking(f, Duration::from_millis(500));
   }
 
   pair_api! {
     assoc
-      with_interval<F, Fut>(f: F, poll_interval: Duration)
-        where {
-          F: Fn(TriggerContext<ProcessEvent>) -> Fut + Send + Sync + 'static,
-          Fut: Future<Output = Result<()>> + Send + 'static,
-        }
-        => Self { callback: new_process_callback(f), known_processes: HashMap::new(), poll_interval };
-      with_interval_blocking<F>(f: F, poll_interval: Duration)
-        where {
-          F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
-        }
-        => Self { callback: new_process_callback_blocking(f), known_processes: HashMap::new(), poll_interval };
+      with_interval(f: F, poll_interval: Duration)
+        callback(TriggerContext<ProcessEvent>)
+        async => Self { callback: new_process_callback(f), known_processes: HashMap::new(), poll_interval };
+        blocking => Self { callback: new_process_callback_blocking(f), known_processes: HashMap::new(), poll_interval };
   }
 
   fn refresh_and_get_processes() -> HashMap<u32, String> {

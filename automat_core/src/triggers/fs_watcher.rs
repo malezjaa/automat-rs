@@ -2,7 +2,6 @@ use crate::{callback, impl_display_debug, pair_api, send_error, Error, Result, T
 use async_trait::async_trait;
 use notify::{Config, Event, EventHandler, RecursiveMode, Watcher};
 use std::path::PathBuf;
-use std::future::Future;
 use tokio::sync::mpsc::Sender;
 
 #[derive(Clone)]
@@ -37,18 +36,11 @@ impl FileSystemTrigger {
       /// # Arguments
       ///
       /// * `f` - An async callback function that receives file system events and returns a `Result`.
-      new<F, Fut>(f: F)
-        where {
-          F: Fn(Result<Event>) -> Fut + Send + Sync + 'static,
-          Fut: Future<Output = Result<()>> + Send + 'static,
-        }
-        => Self { callback: new_file_system_callback(f), config: None, watch_paths: Vec::new() };
-      /// Creates a new `FileSystemTrigger` with a synchronous (blocking) callback.
-      new_blocking<F>(f: F)
-        where {
-          F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
-        }
-        => Self { callback: new_file_system_callback_blocking(f), config: None, watch_paths: Vec::new() };
+      new(f: F)
+        callback(Result<Event>)
+        async => Self { callback: new_file_system_callback(f), config: None, watch_paths: Vec::new() };
+        /// Creates a new `FileSystemTrigger` with a synchronous (blocking) callback.
+        blocking => Self { callback: new_file_system_callback_blocking(f), config: None, watch_paths: Vec::new() };
   }
 
   /// Configures the watcher with custom settings.
