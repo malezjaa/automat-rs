@@ -1,12 +1,4 @@
 //! Clipboard management using 1Password's arboard library.
-//!
-//! This module provides a thread-safe global clipboard interface through a lazily initialized
-//! singleton.
-//!
-//! # Thread Safety
-//!
-//! All functions in this module are thread-safe and can be called from any thread without
-//! external synchronization.
 
 use crate::{Error, Result};
 use arboard::Clipboard;
@@ -14,9 +6,6 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
 /// Global clipboard instance, lazily initialized on first access.
-///
-/// Uses `parking_lot::Mutex` for efficient locking and panics if clipboard
-/// initialization fails during first access.
 static CLIPBOARD: Lazy<Mutex<Clipboard>> = Lazy::new(|| Mutex::new(Clipboard::new().unwrap()));
 
 /// Retrieves the current text content from the system clipboard.

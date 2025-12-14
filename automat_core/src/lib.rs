@@ -18,6 +18,7 @@ mod callback;
 mod clipboard;
 mod display_macro;
 mod error;
+mod macros;
 mod main_loop;
 mod triggers;
 mod window;

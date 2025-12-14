@@ -4,10 +4,11 @@ mod runner;
 pub use fs_builder::FileSystemBuilder;
 
 use crate::{
-  Error, FileSystemTrigger, IntervalTrigger, ProcessEvent, ProcessTrigger, Result, Trigger,
-  TriggerContext, Window, WindowTrigger,
+  pair_api, Error, FileSystemTrigger, IntervalTrigger, ProcessEvent, ProcessTrigger, Result,
+  Trigger, TriggerContext, Window, WindowTrigger,
 };
 use notify::Event;
+use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -35,53 +36,89 @@ impl Automat {
     self
   }
 
-  /// Monitor process starts and exits.
-  pub fn on_process<F>(mut self, f: F) -> Self
-  where
-    F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
-  {
-    let trigger = ProcessTrigger::new(f);
-    self.triggers.push(Box::new(trigger));
-    self
+  pair_api! {
+    method
+    /// Monitor process starts and exits.
+    on_process<F, Fut>(f: F)
+      where {
+        F: Fn(TriggerContext<ProcessEvent>) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<()>> + Send + 'static,
+      }
+      => ProcessTrigger::new(f);
+    /// Monitor process starts and exits with a synchronous (blocking) callback.
+    on_process_blocking<F>(f: F)
+      where {
+        F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
+      }
+      => ProcessTrigger::new_blocking(f);
   }
 
-  /// Monitor process starts and exits with a custom polling interval.
-  pub fn on_process_with_interval<F>(mut self, f: F, interval: Duration) -> Self
-  where
-    F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
-  {
-    let trigger = ProcessTrigger::with_interval(f, interval);
-    self.triggers.push(Box::new(trigger));
-    self
+  pair_api! {
+    method
+    /// Monitor process starts and exits with a custom polling interval.
+    on_process_with_interval<F, Fut>(f: F, interval: Duration)
+      where {
+        F: Fn(TriggerContext<ProcessEvent>) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<()>> + Send + 'static,
+      }
+      => ProcessTrigger::with_interval(f, interval);
+    /// Monitor process starts and exits with a custom polling interval (blocking callback).
+    on_process_with_interval_blocking<F>(f: F, interval: Duration)
+      where {
+        F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
+      }
+      => ProcessTrigger::with_interval_blocking(f, interval);
   }
 
-  /// Run a callback at regular intervals.
-  pub fn on_interval<F>(mut self, interval: Duration, f: F) -> Self
-  where
-    F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
-  {
-    let trigger = IntervalTrigger::new(interval, f);
-    self.triggers.push(Box::new(trigger));
-    self
+  pair_api! {
+    method
+    /// Run a callback at regular intervals.
+    on_interval<F, Fut>(interval: Duration, f: F)
+      where {
+        F: Fn(Duration) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<()>> + Send + 'static,
+      }
+      => IntervalTrigger::new(interval, f);
+    /// Run a callback at regular intervals (blocking callback).
+    on_interval_blocking<F>(interval: Duration, f: F)
+      where {
+        F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
+      }
+      => IntervalTrigger::new_blocking(interval, f);
   }
 
-  /// Detect when the focused window changes.
-  pub fn on_window_focus<F>(mut self, f: F) -> Self
-  where
-    F: Fn(Window) -> Result<()> + Send + Sync + 'static,
-  {
-    let trigger = WindowTrigger::new(f);
-    self.triggers.push(Box::new(trigger));
-    self
+  pair_api! {
+    method
+    /// Detect when the focused window changes.
+    on_window_focus<F, Fut>(f: F)
+      where {
+        F: Fn(Window) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<()>> + Send + 'static,
+      }
+      => WindowTrigger::new(f);
+    /// Detect when the focused window changes (blocking callback).
+    on_window_focus_blocking<F>(f: F)
+      where {
+        F: Fn(Window) -> Result<()> + Send + Sync + 'static,
+      }
+      => WindowTrigger::new_blocking(f);
   }
 
-  pub fn on_fs_watch<F>(mut self, f: F) -> Self
-  where
-    F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
-  {
-    let trigger = FileSystemTrigger::new(f);
-    self.triggers.push(Box::new(trigger));
-    self
+  pair_api! {
+    method
+    /// Monitor filesystem changes.
+    on_fs_watch<F, Fut>(f: F)
+      where {
+        F: Fn(Result<Event>) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<()>> + Send + 'static,
+      }
+      => FileSystemTrigger::new(f);
+    /// Monitor filesystem changes (blocking callback).
+    on_fs_watch_blocking<F>(f: F)
+      where {
+        F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
+      }
+      => FileSystemTrigger::new_blocking(f);
   }
 
   /// Configure a file system watcher using a builder pattern.

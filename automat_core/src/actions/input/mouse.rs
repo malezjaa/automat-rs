@@ -1,5 +1,4 @@
 use crate::{Action, Result, with_enigo};
-use async_trait::async_trait;
 use enigo::{Axis, Button, Coordinate, Direction, Mouse};
 
 /// Performs mouse operations including movement, clicks, and scrolling.

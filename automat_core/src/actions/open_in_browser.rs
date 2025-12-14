@@ -1,6 +1,4 @@
 use crate::{Action, Result};
-use async_trait::async_trait;
-use std::ffi::OsStr;
 
 /// Action that opens a URL in a web browser.
 ///

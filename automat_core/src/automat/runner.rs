@@ -52,15 +52,16 @@ impl Automat {
     shutdown_token.cancel();
 
     for trigger_handle in trigger_handles {
-      // Prefer graceful shutdown, but don't hang forever.
       let mut trigger_handle = trigger_handle;
-      if timeout(Duration::from_secs(2), &mut trigger_handle)
-        .await
-        .is_err()
-      {
-        trigger_handle.abort();
+      match timeout(Duration::from_secs(2), &mut trigger_handle).await {
+        Ok(join_result) => {
+          let _ = join_result;
+        }
+        Err(_) => {
+          trigger_handle.abort();
+          let _ = trigger_handle.await;
+        }
       }
-      let _ = trigger_handle.await;
     }
 
     for event_handle in event_handles {

@@ -15,8 +15,8 @@ async fn main() -> Result<()> {
 fn fs_watcher() -> Automat {
   Automat::new().with_fs_watch(|builder| {
     builder
-      .watch_recursive(Path::new("./src"))
-      .on_event(|event| {
+      .watch_recursive(Path::new("automat_core").canonicalize().unwrap())
+      .on_event(async |event| {
         println!("🔧 File event: {:?}", event);
         Ok(())
       })

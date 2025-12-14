@@ -1,7 +1,8 @@
-use crate::{callback, impl_display_debug, send_error, Error, Result, Trigger, TriggerEvent, TriggerRuntime};
+use crate::{callback, impl_display_debug, pair_api, send_error, Error, Result, Trigger, TriggerEvent, TriggerRuntime};
 use async_trait::async_trait;
 use notify::{Config, Event, EventHandler, RecursiveMode, Watcher};
 use std::path::PathBuf;
+use std::future::Future;
 use tokio::sync::mpsc::Sender;
 
 #[derive(Clone)]
@@ -29,20 +30,25 @@ pub struct FileSystemTrigger {
 }
 
 impl FileSystemTrigger {
-  /// Creates a new `FileSystemTrigger` with the given callback.
-  ///
-  /// # Arguments
-  ///
-  /// * `f` - A sync callback function that receives file system events and returns a `Result`.
-  pub fn new<F>(f: F) -> Self
-  where
-    F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
-  {
-    Self {
-      callback: new_file_system_callback(f),
-      config: None,
-      watch_paths: Vec::new(),
-    }
+  pair_api! {
+    assoc
+      /// Creates a new `FileSystemTrigger` with the given callback.
+      ///
+      /// # Arguments
+      ///
+      /// * `f` - An async callback function that receives file system events and returns a `Result`.
+      new<F, Fut>(f: F)
+        where {
+          F: Fn(Result<Event>) -> Fut + Send + Sync + 'static,
+          Fut: Future<Output = Result<()>> + Send + 'static,
+        }
+        => Self { callback: new_file_system_callback(f), config: None, watch_paths: Vec::new() };
+      /// Creates a new `FileSystemTrigger` with a synchronous (blocking) callback.
+      new_blocking<F>(f: F)
+        where {
+          F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
+        }
+        => Self { callback: new_file_system_callback_blocking(f), config: None, watch_paths: Vec::new() };
   }
 
   /// Configures the watcher with custom settings.
@@ -127,7 +133,7 @@ impl Trigger for FileSystemTrigger {
             return Err(Error::FileWatcherStopped);
           };
 
-          if let Err(err) = (self.callback)(res.map_err(Into::into)) {
+          if let Err(err) = (self.callback)(res.map_err(Into::into)).await {
             if !send_error(&rt.tx, err, "FileSystemTrigger").await {
               break;
             }

@@ -1,12 +1,13 @@
-use crate::triggers::context::{TriggerContext, TriggerEvent, send_error};
-use crate::{Result, Trigger, TriggerRuntime, callback};
+use crate::triggers::context::{send_error, TriggerContext, TriggerEvent};
+use crate::{callback, pair_api, Result, Trigger, TriggerRuntime};
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
-use tokio::sync::mpsc::Sender;
 use std::collections::HashMap;
+use std::future::Future;
 use std::time::Duration;
 use sysinfo::{ProcessesToUpdate, System};
+use tokio::sync::mpsc::Sender;
 use tokio::time::sleep;
 
 static SYSTEM: Lazy<Mutex<System>> = Lazy::new(|| Mutex::new(System::new()));
@@ -34,22 +35,34 @@ pub struct ProcessTrigger {
 }
 
 impl ProcessTrigger {
-  pub fn new<F>(f: F) -> Self
-  where
-    F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
-  {
-    Self::with_interval(f, Duration::from_millis(500))
+  pair_api! {
+    assoc
+      new<F, Fut>(f: F)
+        where {
+          F: Fn(TriggerContext<ProcessEvent>) -> Fut + Send + Sync + 'static,
+          Fut: Future<Output = Result<()>> + Send + 'static,
+        }
+        => Self::with_interval(f, Duration::from_millis(500));
+      new_blocking<F>(f: F)
+        where {
+          F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
+        }
+        => Self::with_interval_blocking(f, Duration::from_millis(500));
   }
 
-  pub fn with_interval<F>(f: F, poll_interval: Duration) -> Self
-  where
-    F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
-  {
-    Self {
-      callback: new_process_callback(f),
-      known_processes: HashMap::new(),
-      poll_interval,
-    }
+  pair_api! {
+    assoc
+      with_interval<F, Fut>(f: F, poll_interval: Duration)
+        where {
+          F: Fn(TriggerContext<ProcessEvent>) -> Fut + Send + Sync + 'static,
+          Fut: Future<Output = Result<()>> + Send + 'static,
+        }
+        => Self { callback: new_process_callback(f), known_processes: HashMap::new(), poll_interval };
+      with_interval_blocking<F>(f: F, poll_interval: Duration)
+        where {
+          F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
+        }
+        => Self { callback: new_process_callback_blocking(f), known_processes: HashMap::new(), poll_interval };
   }
 
   fn refresh_and_get_processes() -> HashMap<u32, String> {
@@ -78,7 +91,9 @@ impl ProcessTrigger {
             name: name.clone(),
           }),
           tx.clone(),
-        )) {
+        ))
+        .await
+        {
           if !send_error(tx, err, "ProcessTrigger").await {
             return;
           }
@@ -95,7 +110,9 @@ impl ProcessTrigger {
             name: name.clone(),
           }),
           tx.clone(),
-        )) {
+        ))
+        .await
+        {
           if !send_error(tx, err, "ProcessTrigger").await {
             return;
           }
@@ -115,7 +132,9 @@ impl Trigger for ProcessTrigger {
         break;
       }
       let current_processes = Self::refresh_and_get_processes();
-      self.handle_process_changes(&current_processes, &rt.tx).await;
+      self
+        .handle_process_changes(&current_processes, &rt.tx)
+        .await;
       self.known_processes = current_processes;
 
       tokio::select! {

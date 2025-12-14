@@ -1,7 +1,9 @@
 use crate::triggers::context::send_error;
-use crate::{callback, impl_display_debug, ActionAsync, Result, Trigger, TriggerRuntime};
+use crate::{callback, impl_display_debug, pair_api, ActionAsync, Result, Trigger, TriggerRuntime};
 use async_trait::async_trait;
 use std::time::Duration;
+
+use std::future::Future;
 
 callback!(IntervalCallback<T>);
 
@@ -14,14 +16,19 @@ pub struct IntervalTrigger {
 }
 
 impl IntervalTrigger {
-  pub fn new<F>(interval: Duration, f: F) -> Self
-  where
-    F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
-  {
-    Self {
-      interval,
-      callback: new_interval_callback(f),
-    }
+  pair_api! {
+    assoc
+      new<F, Fut>(interval: Duration, f: F)
+        where {
+          F: Fn(Duration) -> Fut + Send + Sync + 'static,
+          Fut: Future<Output = Result<()>> + Send + 'static,
+        }
+        => Self { interval, callback: new_interval_callback(f) };
+      new_blocking<F>(interval: Duration, f: F)
+        where {
+          F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
+        }
+        => Self { interval, callback: new_interval_callback_blocking(f) };
   }
 
   #[inline(always)]
@@ -29,8 +36,8 @@ impl IntervalTrigger {
     self.interval
   }
 
-  pub fn call(&self) -> Result<()> {
-    (self.callback)(self.interval)
+  pub async fn call(&self) -> Result<()> {
+    (self.callback)(self.interval).await
   }
 }
 
@@ -38,7 +45,7 @@ impl IntervalTrigger {
 /// Action just calls provided callback.
 impl ActionAsync for IntervalTrigger {
   async fn run_async(&self) -> Result<()> {
-    self.call()
+    self.call().await
   }
 }
 
@@ -53,7 +60,7 @@ impl Trigger for IntervalTrigger {
       tokio::select! {
         _ = rt.shutdown.cancelled() => break,
         _ = ticker.tick() => {
-          if let Err(err) = self.call() {
+          if let Err(err) = self.call().await {
             if !send_error(&rt.tx, err, "IntervalTrigger").await {
               break;
             }

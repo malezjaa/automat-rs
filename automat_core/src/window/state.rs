@@ -1,4 +1,3 @@
-use crate::Error::WindowStateError;
 use crate::{Error, Result, WindowIdentifier};
 
 #[cfg(target_os = "windows")]

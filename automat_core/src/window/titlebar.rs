@@ -1,4 +1,4 @@
-use crate::window::{WindowIdentifier, get_current_window_identifier};
+use crate::window::WindowIdentifier;
 
 #[cfg(target_os = "windows")]
 /// Retrieves the title of the specified window on Windows.
