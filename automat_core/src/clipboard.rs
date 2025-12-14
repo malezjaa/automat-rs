@@ -36,7 +36,7 @@ static CLIPBOARD: Lazy<Mutex<Clipboard>> = Lazy::new(|| Mutex::new(Clipboard::ne
 /// ```
 #[inline(always)]
 pub fn get_clipboard_text() -> Result<String> {
-    CLIPBOARD.lock().get_text().map_err(Error::ClipboardError)
+  CLIPBOARD.lock().get_text().map_err(Error::ClipboardError)
 }
 
 /// Sets the system clipboard to the specified text content.
@@ -55,8 +55,8 @@ pub fn get_clipboard_text() -> Result<String> {
 /// ```
 #[inline(always)]
 pub fn set_clipboard_text(text: &str) -> Result<()> {
-    CLIPBOARD
-        .lock()
-        .set_text(text)
-        .map_err(Error::ClipboardError)
+  CLIPBOARD
+    .lock()
+    .set_text(text)
+    .map_err(Error::ClipboardError)
 }

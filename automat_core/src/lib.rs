@@ -31,4 +31,4 @@ pub use triggers::*;
 pub use window::*;
 
 pub use async_trait::async_trait;
-pub use display_info::{error::*, DisplayInfo};
+pub use display_info::{DisplayInfo, error::*};

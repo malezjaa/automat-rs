@@ -1,131 +1,151 @@
 use crate::{
-    await_shutdown, FileSystemTrigger, IntervalTrigger, ProcessEvent, ProcessTrigger, Result,
-    Trigger, Window, WindowTrigger,
+  await_shutdown, Error, IntervalTrigger, ProcessEvent, ProcessTrigger, Result, Trigger,
+  TriggerContext, TriggerEvent, Window, WindowTrigger,
 };
-use notify::{Config, Event};
-use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::mpsc::{channel, Receiver};
+use tokio_util::sync::CancellationToken;
+
+/// Error handler type for trigger callbacks.
+pub type ErrorHandler = Arc<dyn Fn(Error) + Send + Sync>;
 
 /// Builder for creating automation workflows.
 pub struct Automat {
-    triggers: Vec<Box<dyn Trigger>>,
+  triggers: Vec<Box<dyn Trigger>>,
+  error_handler: Option<ErrorHandler>,
 }
 
 impl Automat {
-    /// Creates a new `Automat` instance.
-    pub fn new() -> Self {
-        Self {
-            triggers: Vec::new(),
+  /// Creates a new `Automat` instance.
+  pub fn new() -> Self {
+    Self {
+      triggers: Vec::new(),
+      error_handler: None,
+    }
+  }
+
+  /// Set a custom error handler for all trigger callbacks.
+  pub fn on_error<F>(mut self, handler: F) -> Self
+  where
+    F: Fn(Error) + Send + Sync + 'static,
+  {
+    self.error_handler = Some(Arc::new(handler));
+    self
+  }
+
+  /// Monitor process starts and exits.
+  pub fn on_process<F>(mut self, f: F) -> Self
+  where
+    F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
+  {
+    let trigger = ProcessTrigger::new(f);
+    self.triggers.push(Box::new(trigger));
+    self
+  }
+
+  /// Monitor process starts and exits with a custom polling interval.
+  pub fn on_process_with_interval<F>(mut self, f: F, interval: Duration) -> Self
+  where
+    F: Fn(TriggerContext<ProcessEvent>) -> Result<()> + Send + Sync + 'static,
+  {
+    let trigger = ProcessTrigger::with_interval(f, interval);
+    self.triggers.push(Box::new(trigger));
+    self
+  }
+
+  /// Run a callback at regular intervals.
+  pub fn on_interval<F>(mut self, interval: Duration, f: F) -> Self
+  where
+    F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
+  {
+    let trigger = IntervalTrigger::new(interval, f);
+    self.triggers.push(Box::new(trigger));
+    self
+  }
+
+  /// Detect when the focused window changes.
+  pub fn on_window_focus<F>(mut self, f: F) -> Self
+  where
+    F: Fn(Window) -> Result<()> + Send + Sync + 'static,
+  {
+    let trigger = WindowTrigger::new(f);
+    self.triggers.push(Box::new(trigger));
+    self
+  }
+
+  pub async fn run(self) -> Result<()> {
+    let error_handler = self.error_handler.clone();
+    let mut handles = Vec::new();
+
+    for mut trigger in self.triggers {
+      let (tx, rx) = channel(100);
+      let handler = error_handler.clone();
+      let cancel_token = CancellationToken::new();
+      let cancel_token_clone = cancel_token.clone();
+
+      let trigger_handle = tokio::spawn(async move {
+        tokio::select! {
+            _ = trigger.start(tx) => {},
+            _ = cancel_token_clone.cancelled() => {},
         }
+      });
+
+      let event_handle =
+        tokio::spawn(async move { Self::handle_trigger_events(rx, handler, cancel_token).await });
+
+      handles.push((trigger_handle, event_handle));
     }
 
-    /// Monitor process starts and exits.
-    pub fn on_process<F>(mut self, f: F) -> Self
-    where
-        F: Fn(ProcessEvent) -> Result<()> + Send + Sync + 'static,
-    {
-        let trigger = ProcessTrigger::new(f);
-        self.triggers.push(Box::new(trigger));
-        self
+    let shutdown_result = await_shutdown().await;
+
+    for (trigger_handle, event_handle) in handles {
+      trigger_handle.abort();
+      event_handle.abort();
     }
 
-    /// Monitor process starts and exits with a custom polling interval.
-    pub fn on_process_with_interval<F>(mut self, f: F, interval: Duration) -> Self
-    where
-        F: Fn(ProcessEvent) -> Result<()> + Send + Sync + 'static,
-    {
-        let trigger = ProcessTrigger::with_interval(f, interval);
-        self.triggers.push(Box::new(trigger));
-        self
-    }
+    shutdown_result
+  }
 
-    /// Run a callback at regular intervals.
-    pub fn on_interval<F>(mut self, interval: Duration, f: F) -> Self
-    where
-        F: Fn(Duration) -> Result<()> + Send + Sync + 'static,
-    {
-        let trigger = IntervalTrigger::new(interval, f);
-        self.triggers.push(Box::new(trigger));
-        self
-    }
-
-    /// Detect when the focused window changes.
-    pub fn on_window_focus<F>(mut self, f: F) -> Self
-    where
-        F: Fn(Window) -> Result<()> + Send + Sync + 'static,
-    {
-        let trigger = WindowTrigger::new(f);
-        self.triggers.push(Box::new(trigger));
-        self
-    }
-
-    /// Watch for file system changes. Chain with `.watch_path()` and `.done()`.
-    pub fn on_file_system<F>(self, f: F) -> FileSystemTriggerBuilder
-    where
-        F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
-    {
-        let trigger = FileSystemTrigger::new(f);
-        FileSystemTriggerBuilder {
-            automat: self,
-            fs_trigger: trigger,
+  async fn handle_trigger_events(
+    mut rx: Receiver<TriggerEvent>,
+    error_handler: Option<ErrorHandler>,
+    cancel_token: CancellationToken,
+  ) {
+    while let Some(event) = rx.recv().await {
+      match event {
+        TriggerEvent::Error(err) => {
+          if let Some(ref handler) = error_handler {
+            handler(err);
+          } else {
+            eprintln!("Trigger error: {}", err);
+          }
         }
-    }
-
-    /// Start all triggers and run until shutdown (Ctrl+C).
-    pub async fn run(self) -> Result<()> {
-        for mut trigger in self.triggers {
-            tokio::spawn(async move {
-                if let Err(e) = trigger.start().await {
-                    eprintln!("Trigger '{}' failed: {}", trigger.name(), e);
-                }
-            });
+        TriggerEvent::ErrorFatal(err) => {
+          if let Some(ref handler) = error_handler {
+            handler(err);
+          } else {
+            eprintln!("Fatal trigger error: {}", err);
+          }
+          cancel_token.cancel();
+          break;
         }
-
-        await_shutdown().await
+        TriggerEvent::Stop => {
+          cancel_token.cancel();
+          break;
+        }
+      }
     }
+  }
 
-    /// Add a custom trigger implementation.
-    pub fn with_trigger<T: Trigger + 'static>(mut self, trigger: T) -> Self {
-        self.triggers.push(Box::new(trigger));
-        self
-    }
+  pub fn with_trigger<T: Trigger + 'static>(mut self, trigger: T) -> Self {
+    self.triggers.push(Box::new(trigger));
+    self
+  }
 }
 
 impl Default for Automat {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Builder for configuring file system triggers.
-pub struct FileSystemTriggerBuilder {
-    automat: Automat,
-    fs_trigger: FileSystemTrigger,
-}
-
-impl FileSystemTriggerBuilder {
-    /// Add a path to watch. Set `recursive` to `true` to watch subdirectories.
-    pub fn watch_path(mut self, path: PathBuf, recursive: bool) -> Self {
-        self.fs_trigger = self.fs_trigger.watch_path(path, recursive);
-        self
-    }
-
-    /// Configure the watcher with custom settings.
-    pub fn with_config(mut self, config: Config) -> Self {
-        self.fs_trigger = self.fs_trigger.with_config(config);
-        self
-    }
-
-    /// Finish configuring the file system trigger.
-    pub fn done(mut self) -> Automat {
-        self.automat
-            .triggers
-            .push(Box::new(self.fs_trigger));
-        self.automat
-    }
-
-    /// Finish configuration and start running. Equivalent to `.done().run().await`.
-    pub async fn run(self) -> Result<()> {
-        self.done().run().await
-    }
+  fn default() -> Self {
+    Self::new()
+  }
 }

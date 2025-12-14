@@ -1,16 +1,22 @@
+mod context;
 mod fs_watcher;
 mod interval;
 mod process;
 mod window;
 
-use super::error::Result;
+use super::error::{Error, Result};
 use crate::Action;
 use async_trait::async_trait;
-
+pub use context::*;
 pub use fs_watcher::*;
 pub use interval::*;
 pub use process::*;
+use std::sync::Arc;
+use tokio::sync::mpsc::Sender;
 pub use window::*;
+
+/// Error handler for trigger callbacks.
+pub type TriggerErrorHandler = Arc<dyn Fn(Error) + Send + Sync>;
 
 /// Represents a trigger that initiates workflow execution.
 ///
@@ -49,45 +55,31 @@ pub use window::*;
 /// ```
 #[async_trait]
 pub trait Trigger: Send + Sync {
-    /// Starts the trigger and begins listening for events.
-    ///
-    /// This method should block until `stop()` is called or an error occurs.
-    /// Implementations should handle their own concurrency (spawning tasks,
-    /// setting up listeners, etc.).
-    async fn start(&mut self) -> Result<()>;
+  /// Starts the trigger and begins listening for events.
+  ///
+  /// This method should block until `stop()` is called or an error occurs.
+  /// Implementations should handle their own concurrency (spawning tasks,
+  /// setting up listeners, etc.).
+  async fn start(&mut self, tx: Sender<TriggerEvent>);
 
-    /// Stops the trigger and cleans up resources.
-    ///
-    /// This method should gracefully shut down the trigger, cancelling any
-    /// pending operations and releasing resources. It should be idempotent
-    /// (safe to call multiple times).
-    ///
-    async fn stop(&mut self) -> Result<()> {
-        Ok(())
-    }
+  /// Stops the trigger and cleans up resources.
+  ///
+  /// This method should gracefully shut down the trigger, cancelling any
+  /// pending operations and releasing resources. It should be idempotent
+  /// (safe to call multiple times).
+  ///
+  async fn stop(&mut self) -> Result<()> {
+    Ok(())
+  }
 
-    /// Returns a unique identifier for this trigger.
-    fn name(&self) -> String;
+  /// Returns a unique identifier for this trigger.
+  fn name(&self) -> String;
 
-    /// Returns whether the trigger is currently running.
-    ///
-    /// The default implementation returns `false`. Override if you need to
-    /// track the running state.
-    fn is_running(&self) -> bool {
-        false
-    }
-}
-
-/// Spawns new threads with the trigger instances running on them.
-pub async fn new_trigger(triggers: Vec<Box<dyn Trigger>>) {
-    for mut trigger in triggers {
-        tokio::spawn(async move { trigger.start().await });
-    }
-}
-
-#[macro_export]
-macro_rules! trigger {
-    ($($trigger:expr),+ $(,)?) => {
-        $crate::new_trigger(vec![$(Box::new($trigger) as Box<dyn Trigger>),+]).await;
-    };
+  /// Returns whether the trigger is currently running.
+  ///
+  /// The default implementation returns `false`. Override if you need to
+  /// track the running state.
+  fn is_running(&self) -> bool {
+    false
+  }
 }

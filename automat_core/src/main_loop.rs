@@ -7,5 +7,5 @@ use tokio::signal::ctrl_c;
 /// schedules, file watchers, etc.) to run concurrently in the background.
 /// The application will run until Ctrl-C (SIGINT) is received.
 pub async fn await_shutdown() -> Result<()> {
-    ctrl_c().await.map_err(Error::IoError)
+  ctrl_c().await.map_err(Error::IoError)
 }

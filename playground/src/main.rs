@@ -2,18 +2,20 @@ use automat_core::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    Automat::new()
-        .on_process(|event| {
-            match event {
-                ProcessEvent::Started(st) => {
-                    println!("Process started {}", st.name);
-                }
-                ProcessEvent::Exited(ex) => {
-                    println!("Process exited: {}", ex.name);
-                }
-            }
-            Ok(())
-        })
-        .run()
-        .await
+  Automat::new()
+    .on_error(|err| {
+      eprintln!("🚨 Custom error handler: {}", err);
+    })
+    .on_process(process)
+    .run()
+    .await
+}
+
+fn process(ctx: TriggerContext<ProcessEvent>) -> Result<()> {
+  match &ctx.data {
+    ProcessEvent::Started(st) => {}
+    _ => {}
+  }
+
+  Ok(())
 }
