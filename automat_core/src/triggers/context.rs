@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{Error, Result};
 use tokio::sync::mpsc;
 
 /// Sent between channels to indicate trigger events.
@@ -19,18 +19,56 @@ impl<T> TriggerContext<T> {
     Self { data, tx }
   }
 
-  pub fn error(&self, error: Error) {
-    let _ = self.tx.try_send(TriggerEvent::Error(error));
+  /// Send an error event. Returns Err if the channel is full or closed.
+  pub fn error(&self, error: Error) -> Result<()> {
+    self.tx.try_send(TriggerEvent::Error(error)).map_err(|e| {
+      eprintln!(
+        "Warning: Failed to send error event (channel backpressure): {:?}",
+        e
+      );
+      Error::ChannelSend
+    })
   }
 
-  pub fn error_fatal(&self, error: Error) {
-    let _ = self.tx.try_send(TriggerEvent::ErrorFatal(error));
+  /// Send a fatal error event. Returns Err if the channel is full or closed.
+  pub fn error_fatal(&self, error: Error) -> Result<()> {
+    self
+      .tx
+      .try_send(TriggerEvent::ErrorFatal(error))
+      .map_err(|e| {
+        eprintln!(
+          "Warning: Failed to send fatal error event (channel backpressure): {:?}",
+          e
+        );
+        Error::ChannelSend
+      })
   }
 
-  /// Sends a stop signal to the trigger.
-  pub fn stop(&self) {
-    let _ = self.tx.try_send(TriggerEvent::Stop);
+  /// Sends a stop signal to the trigger. Returns Err if the channel is full or closed.
+  pub fn stop(&self) -> Result<()> {
+    self.tx.try_send(TriggerEvent::Stop).map_err(|e| {
+      eprintln!(
+        "Warning: Failed to send stop event (channel backpressure): {:?}",
+        e
+      );
+      Error::ChannelSend
+    })
   }
 }
 
 pub type TriggerChannel = (mpsc::Sender<TriggerEvent>, mpsc::Receiver<TriggerEvent>);
+
+pub async fn send_error(
+  tx: &mpsc::Sender<TriggerEvent>,
+  err: crate::Error,
+  trigger_name: &str,
+) -> bool {
+  if tx.send(TriggerEvent::Error(err)).await.is_err() {
+    eprintln!(
+      "Warning: {} event channel closed, stopping trigger",
+      trigger_name
+    );
+    return false;
+  }
+  true
+}

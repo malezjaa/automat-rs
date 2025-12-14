@@ -1,4 +1,4 @@
-use crate::triggers::context::{TriggerContext, TriggerEvent};
+use crate::triggers::context::{TriggerContext, TriggerEvent, send_error};
 use crate::{Result, Trigger, callback};
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
@@ -79,7 +79,9 @@ impl ProcessTrigger {
           }),
           tx.clone(),
         )) {
-          let _ = tx.send(TriggerEvent::Error(err)).await;
+          if !send_error(tx, err, "ProcessTrigger").await {
+            return;
+          }
         }
       }
     }
@@ -94,7 +96,9 @@ impl ProcessTrigger {
           }),
           tx.clone(),
         )) {
-          let _ = tx.send(TriggerEvent::Error(err)).await;
+          if !send_error(tx, err, "ProcessTrigger").await {
+            return;
+          }
         }
       }
     }

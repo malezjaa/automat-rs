@@ -30,6 +30,9 @@ pub enum Error {
 
   #[error("Callback error: {0}")]
   CallbackError(DynError),
+
+  #[error("Failed to send trigger event (channel full or closed)")]
+  ChannelSend,
 }
 
 impl From<DynError> for Error {

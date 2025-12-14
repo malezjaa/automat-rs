@@ -1,3 +1,4 @@
+use crate::triggers::context::send_error;
 use crate::{callback, impl_display_debug, ActionAsync, Result, Trigger, TriggerEvent};
 use async_trait::async_trait;
 use std::time::Duration;
@@ -52,7 +53,9 @@ impl Trigger for IntervalTrigger {
     loop {
       ticker.tick().await;
       if let Err(err) = self.call() {
-        let _ = tx.send(TriggerEvent::Error(err)).await;
+        if !send_error(&tx, err, "IntervalTrigger").await {
+          break;
+        }
       }
     }
   }

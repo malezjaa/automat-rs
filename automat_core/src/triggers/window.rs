@@ -1,3 +1,4 @@
+use crate::triggers::context::send_error;
 use crate::{Result, Trigger, TriggerEvent, Window, callback};
 use async_trait::async_trait;
 use tokio::sync::mpsc::Sender;
@@ -34,7 +35,9 @@ impl Trigger for WindowTrigger {
         if self.last_window.as_ref() != Some(&window) {
           self.last_window = Some(window.clone());
           if let Err(err) = (self.callback)(window) {
-            let _ = tx.send(TriggerEvent::Error(err)).await;
+            if !send_error(&tx, err, "WindowTrigger").await {
+              break;
+            }
           }
         }
       }
