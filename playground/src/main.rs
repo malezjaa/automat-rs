@@ -1,4 +1,5 @@
 use automat_core::*;
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -6,16 +7,18 @@ async fn main() -> Result<()> {
     .on_error(|err| {
       eprintln!("🚨 Custom error handler: {}", err);
     })
-    .on_process(process)
+    .extend(fs_watcher())
     .run()
     .await
 }
 
-fn process(ctx: TriggerContext<ProcessEvent>) -> Result<()> {
-  match &ctx.data {
-    ProcessEvent::Started(st) => {}
-    _ => {}
-  }
-
-  Ok(())
+fn fs_watcher() -> Automat {
+  Automat::new().with_fs_watch(|builder| {
+    builder
+      .watch_recursive(Path::new("./src"))
+      .on_event(|event| {
+        println!("🔧 File event: {:?}", event);
+        Ok(())
+      })
+  })
 }

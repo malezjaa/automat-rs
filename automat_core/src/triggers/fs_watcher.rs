@@ -1,8 +1,19 @@
-use crate::{callback, impl_display_debug, Error, Result, Trigger, TriggerEvent};
+use crate::{callback, impl_display_debug, send_error, Error, Result, Trigger, TriggerEvent, TriggerRuntime};
 use async_trait::async_trait;
-use notify::{Config, Event, RecursiveMode, Watcher};
+use notify::{Config, Event, EventHandler, RecursiveMode, Watcher};
 use std::path::PathBuf;
 use tokio::sync::mpsc::Sender;
+
+#[derive(Clone)]
+struct TokioEventHandler {
+  tx: Sender<notify::Result<Event>>,
+}
+
+impl EventHandler for TokioEventHandler {
+  fn handle_event(&mut self, event: notify::Result<Event>) {
+    let _ = self.tx.blocking_send(event);
+  }
+}
 
 callback!(FileSystemCallback<T>);
 
@@ -74,39 +85,58 @@ impl Trigger for FileSystemTrigger {
   /// Starts watching the configured paths and executes the callback on each event.
   ///
   /// This method blocks until an error occurs or the watcher is stopped.
-  /// Each file system event triggers the registered callback.
-  async fn start(&mut self, tx: Sender<TriggerEvent>) {
+  async fn start(&mut self, rt: TriggerRuntime) -> Result<()> {
     use notify::RecommendedWatcher;
-    use std::sync::mpsc;
 
     if self.watch_paths.is_empty() {
-      let _ = tx
+      let _ = rt
+        .tx
         .send(TriggerEvent::ErrorFatal(Error::NoWatchPaths()))
         .await;
 
-      return;
+      return Ok(());
     }
 
-    let (fs_tx, fs_rx) = mpsc::channel();
-    let mut watcher = match RecommendedWatcher::new(fs_tx, self.config.unwrap_or_default()) {
+    println!("started: {:?}", self.watch_paths);
+
+    let (fs_tx, mut fs_rx) = tokio::sync::mpsc::channel::<notify::Result<Event>>(1024);
+    let handler = TokioEventHandler { tx: fs_tx };
+
+    let mut watcher = match RecommendedWatcher::new(handler, self.config.clone().unwrap_or_default()) {
       Ok(w) => w,
       Err(e) => {
-        let _ = tx.send(TriggerEvent::ErrorFatal(Error::from(e))).await;
-        return;
+        send_error(&rt.tx, Error::from(e), "FileSystemTrigger").await;
+
+        return Ok(());
       }
     };
 
     for (path, mode) in &self.watch_paths {
       if let Err(e) = watcher.watch(path, *mode) {
-        let _ = tx.send(TriggerEvent::Error(Error::from(e))).await;
+        if !send_error(&rt.tx, Error::from(e), "FileSystemTrigger").await {
+          return Ok(());
+        }
       }
     }
 
-    for res in fs_rx {
-      if let Err(err) = (self.callback)(res.map_err(Into::into)) {
-        let _ = tx.send(TriggerEvent::Error(err)).await;
+    loop {
+      tokio::select! {
+        _ = rt.shutdown.cancelled() => break,
+        maybe = fs_rx.recv() => {
+          let Some(res) = maybe else {
+            return Err(Error::FileWatcherStopped);
+          };
+
+          if let Err(err) = (self.callback)(res.map_err(Into::into)) {
+            if !send_error(&rt.tx, err, "FileSystemTrigger").await {
+              break;
+            }
+          }
+        }
       }
     }
+
+    Ok(())
   }
 
   fn name(&self) -> String {

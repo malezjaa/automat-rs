@@ -2,6 +2,7 @@ use crate::{Error, Result};
 use tokio::sync::mpsc;
 
 /// Sent between channels to indicate trigger events.
+#[derive(Debug)]
 pub enum TriggerEvent {
   Error(Error),
   /// This stops the trigger.
@@ -58,11 +59,7 @@ impl<T> TriggerContext<T> {
 
 pub type TriggerChannel = (mpsc::Sender<TriggerEvent>, mpsc::Receiver<TriggerEvent>);
 
-pub async fn send_error(
-  tx: &mpsc::Sender<TriggerEvent>,
-  err: crate::Error,
-  trigger_name: &str,
-) -> bool {
+pub async fn send_error(tx: &mpsc::Sender<TriggerEvent>, err: Error, trigger_name: &str) -> bool {
   if tx.send(TriggerEvent::Error(err)).await.is_err() {
     eprintln!(
       "Warning: {} event channel closed, stopping trigger",

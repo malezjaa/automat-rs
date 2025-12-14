@@ -1,12 +1,12 @@
 use crate::triggers::context::{TriggerContext, TriggerEvent, send_error};
-use crate::{Result, Trigger, callback};
+use crate::{Result, Trigger, TriggerRuntime, callback};
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use tokio::sync::mpsc::Sender;
 use std::collections::HashMap;
 use std::time::Duration;
 use sysinfo::{ProcessesToUpdate, System};
-use tokio::sync::mpsc::Sender;
 use tokio::time::sleep;
 
 static SYSTEM: Lazy<Mutex<System>> = Lazy::new(|| Mutex::new(System::new()));
@@ -107,15 +107,24 @@ impl ProcessTrigger {
 
 #[async_trait]
 impl Trigger for ProcessTrigger {
-  async fn start(&mut self, tx: Sender<TriggerEvent>) {
+  async fn start(&mut self, rt: TriggerRuntime) -> Result<()> {
     self.known_processes = Self::refresh_and_get_processes();
 
     loop {
+      if rt.shutdown.is_cancelled() {
+        break;
+      }
       let current_processes = Self::refresh_and_get_processes();
-      self.handle_process_changes(&current_processes, &tx).await;
+      self.handle_process_changes(&current_processes, &rt.tx).await;
       self.known_processes = current_processes;
-      sleep(self.poll_interval).await;
+
+      tokio::select! {
+        _ = rt.shutdown.cancelled() => break,
+        _ = sleep(self.poll_interval) => {}
+      }
     }
+
+    Ok(())
   }
 
   fn name(&self) -> String {

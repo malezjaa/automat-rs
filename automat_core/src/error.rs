@@ -28,6 +28,9 @@ pub enum Error {
   #[error("No watch paths configured")]
   NoWatchPaths(),
 
+  #[error("File watcher stopped unexpectedly")]
+  FileWatcherStopped,
+
   #[error("Callback error: {0}")]
   CallbackError(DynError),
 

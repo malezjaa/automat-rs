@@ -5,7 +5,6 @@ mod process;
 mod window;
 
 use super::error::{Error, Result};
-use crate::Action;
 use async_trait::async_trait;
 pub use context::*;
 pub use fs_watcher::*;
@@ -13,10 +12,20 @@ pub use interval::*;
 pub use process::*;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
+use tokio_util::sync::CancellationToken;
 pub use window::*;
 
 /// Error handler for trigger callbacks.
 pub type TriggerErrorHandler = Arc<dyn Fn(Error) + Send + Sync>;
+
+/// Runtime context passed to triggers by the runner.
+///
+/// Triggers should stop promptly when `shutdown` is cancelled.
+#[derive(Clone)]
+pub struct TriggerRuntime {
+  pub tx: Sender<TriggerEvent>,
+  pub shutdown: CancellationToken,
+}
 
 /// Represents a trigger that initiates workflow execution.
 ///
@@ -28,29 +37,22 @@ pub type TriggerErrorHandler = Arc<dyn Fn(Error) + Send + Sync>;
 /// # Example
 ///
 /// ```rust no_run
-/// struct WebhookTrigger {
-///     port: u16,
-///     server_handle: Option<ServerHandle>,
-/// }
+/// use automat_core::{async_trait, Result, Trigger, TriggerEvent, TriggerRuntime};
+///
+/// struct MyTrigger;
 ///
 /// #[async_trait]
-/// impl Trigger for WebhookTrigger {
-///     async fn start(&mut self) -> Result<()> {
-///         let listener = TcpListener::bind(("0.0.0.0", self.port)).await?;
-///         // Handle incoming requests and execute workflows
-///         Ok(())
-///     }
+/// impl Trigger for MyTrigger {
+///   async fn start(&mut self, rt: TriggerRuntime) -> Result<()> {
+///     // Example: run until shutdown is requested.
+///     rt.shutdown.cancelled().await;
+///     let _ = rt.tx.send(TriggerEvent::Stop).await;
+///     Ok(())
+///   }
 ///
-///     async fn stop(&mut self) -> Result<()> {
-///         if let Some(handle) = self.server_handle.take() {
-///             handle.shutdown().await;
-///         }
-///         Ok(())
-///     }
-///
-///     fn name(&self) -> &str {
-///         "webhook"
-///     }
+///   fn name(&self) -> String {
+///     "my-trigger".to_string()
+///   }
 /// }
 /// ```
 #[async_trait]
@@ -60,7 +62,7 @@ pub trait Trigger: Send + Sync {
   /// This method should block until `stop()` is called or an error occurs.
   /// Implementations should handle their own concurrency (spawning tasks,
   /// setting up listeners, etc.).
-  async fn start(&mut self, tx: Sender<TriggerEvent>);
+  async fn start(&mut self, rt: TriggerRuntime) -> Result<()>;
 
   /// Stops the trigger and cleans up resources.
   ///

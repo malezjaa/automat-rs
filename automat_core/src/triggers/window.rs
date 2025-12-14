@@ -1,7 +1,6 @@
 use crate::triggers::context::send_error;
-use crate::{Result, Trigger, TriggerEvent, Window, callback};
+use crate::{Result, Trigger, TriggerRuntime, Window, callback};
 use async_trait::async_trait;
-use tokio::sync::mpsc::Sender;
 
 callback!(WindowChangeCallback<T>);
 
@@ -25,23 +24,29 @@ impl WindowTrigger {
 
 #[async_trait]
 impl Trigger for WindowTrigger {
-  async fn start(&mut self, tx: Sender<TriggerEvent>) {
+  async fn start(&mut self, rt: TriggerRuntime) -> Result<()> {
     use tokio::time::{Duration, interval};
     let mut ticker = interval(Duration::from_millis(500));
 
     loop {
-      ticker.tick().await;
-      if let Some(window) = Window::current() {
-        if self.last_window.as_ref() != Some(&window) {
-          self.last_window = Some(window.clone());
-          if let Err(err) = (self.callback)(window) {
-            if !send_error(&tx, err, "WindowTrigger").await {
-              break;
+      tokio::select! {
+        _ = rt.shutdown.cancelled() => break,
+        _ = ticker.tick() => {
+          if let Some(window) = Window::current() {
+            if self.last_window.as_ref() != Some(&window) {
+              self.last_window = Some(window.clone());
+              if let Err(err) = (self.callback)(window) {
+                if !send_error(&rt.tx, err, "WindowTrigger").await {
+                  break;
+                }
+              }
             }
           }
         }
       }
     }
+
+    Ok(())
   }
 
   fn name(&self) -> String {

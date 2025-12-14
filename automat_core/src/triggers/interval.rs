@@ -1,8 +1,7 @@
 use crate::triggers::context::send_error;
-use crate::{callback, impl_display_debug, ActionAsync, Result, Trigger, TriggerEvent};
+use crate::{callback, impl_display_debug, ActionAsync, Result, Trigger, TriggerRuntime};
 use async_trait::async_trait;
 use std::time::Duration;
-use tokio::sync::mpsc::Sender;
 
 callback!(IntervalCallback<T>);
 
@@ -45,19 +44,25 @@ impl ActionAsync for IntervalTrigger {
 
 #[async_trait]
 impl Trigger for IntervalTrigger {
-  async fn start(&mut self, tx: Sender<TriggerEvent>) {
+  async fn start(&mut self, rt: TriggerRuntime) -> Result<()> {
     use tokio::time::interval;
     let mut ticker = interval(self.interval());
     ticker.tick().await; // The first tick completes immediately
 
     loop {
-      ticker.tick().await;
-      if let Err(err) = self.call() {
-        if !send_error(&tx, err, "IntervalTrigger").await {
-          break;
+      tokio::select! {
+        _ = rt.shutdown.cancelled() => break,
+        _ = ticker.tick() => {
+          if let Err(err) = self.call() {
+            if !send_error(&rt.tx, err, "IntervalTrigger").await {
+              break;
+            }
+          }
         }
       }
     }
+
+    Ok(())
   }
 
   fn name(&self) -> String {
