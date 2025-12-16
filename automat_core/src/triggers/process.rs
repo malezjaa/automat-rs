@@ -1,10 +1,11 @@
-use crate::triggers::context::{send_error, TriggerContext, TriggerEvent};
-use crate::{callback, pair_api, Result, Trigger, TriggerRuntime};
+use crate::triggers::context::{TriggerContext, TriggerEvent};
+use crate::{callback, pair_api, send_err, Result, Trigger, TriggerRuntime};
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::time::Duration;
+use derivative::Derivative;
 use sysinfo::{ProcessesToUpdate, System};
 use tokio::sync::mpsc::Sender;
 use tokio::time::sleep;
@@ -27,7 +28,10 @@ pub enum ProcessEvent {
 
 callback!(ProcessCallback<T>);
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct ProcessTrigger {
+  #[derivative(Debug = "ignore")]
   callback: ProcessCallback<TriggerContext<ProcessEvent>>,
   known_processes: HashMap<u32, String>,
   poll_interval: Duration,
@@ -70,38 +74,30 @@ impl ProcessTrigger {
     // Check for new processes
     for (pid, name) in current_processes {
       if !self.known_processes.contains_key(pid) {
-        if let Err(err) = (self.callback)(TriggerContext::new(
+        let context = TriggerContext::new(
           ProcessEvent::Started(ProcessInfo {
             pid: *pid,
             name: name.clone(),
           }),
           tx.clone(),
-        ))
-        .await
-        {
-          if !send_error(tx, err, "ProcessTrigger").await {
-            return;
-          }
-        }
+        );
+
+        send_err!((self.callback)(context).await, "ProcessTrigger", tx, return);
       }
     }
 
     // Check for exited processes
     for (pid, name) in &self.known_processes {
       if !current_processes.contains_key(pid) {
-        if let Err(err) = (self.callback)(TriggerContext::new(
+        let context = TriggerContext::new(
           ProcessEvent::Exited(ProcessInfo {
             pid: *pid,
             name: name.clone(),
           }),
           tx.clone(),
-        ))
-        .await
-        {
-          if !send_error(tx, err, "ProcessTrigger").await {
-            return;
-          }
-        }
+        );
+
+        send_err!((self.callback)(context).await, "ProcessTrigger", tx, return);
       }
     }
   }

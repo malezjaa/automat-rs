@@ -1,4 +1,7 @@
-use crate::{callback, impl_display_debug, pair_api, send_error, Error, Result, Trigger, TriggerEvent, TriggerRuntime};
+use crate::{
+  callback, impl_display_debug, pair_api, send_error, Error, Result, Trigger,
+  TriggerContext, TriggerEvent, TriggerRuntime,
+};
 use async_trait::async_trait;
 use notify::{Config, Event, EventHandler, RecursiveMode, Watcher};
 use std::path::PathBuf;
@@ -18,12 +21,8 @@ impl EventHandler for TokioEventHandler {
 callback!(FileSystemCallback<T>);
 
 /// A trigger that watches for file system events and executes a callback when events occur.
-///
-/// `FileSystemTrigger` monitors one or more file system paths for changes such as file
-/// modifications, creations, deletions, and permission changes. When an event is detected,
-/// the registered callback is invoked with the event details.
 pub struct FileSystemTrigger {
-  callback: FileSystemCallback<Result<Event>>,
+  callback: FileSystemCallback<TriggerContext<Result<Event>>>,
   config: Option<Config>,
   watch_paths: Vec<(PathBuf, RecursiveMode)>,
 }
@@ -32,35 +31,20 @@ impl FileSystemTrigger {
   pair_api! {
     assoc
       /// Creates a new `FileSystemTrigger` with the given callback.
-      ///
-      /// # Arguments
-      ///
-      /// * `f` - An async callback function that receives file system events and returns a `Result`.
       new(f: F)
-        callback(Result<Event>)
+        callback(TriggerContext<Result<Event>>)
         async => Self { callback: new_file_system_callback(f), config: None, watch_paths: Vec::new() };
         /// Creates a new `FileSystemTrigger` with a synchronous (blocking) callback.
         blocking => Self { callback: new_file_system_callback_blocking(f), config: None, watch_paths: Vec::new() };
   }
 
   /// Configures the watcher with custom settings.
-  ///
-  /// # Arguments
-  ///
-  /// * `config` - A `notify::Config` an object with custom watcher settings.
-  ///   If not provided, the default configuration will be used.
   pub fn with_config(mut self, config: Config) -> Self {
     self.config = Some(config);
     self
   }
 
   /// Adds a path to be monitored for file system events.
-  ///
-  /// # Arguments
-  ///
-  /// * `path` - The file system path to watch.
-  /// * `recursive` - If `true`, watches the directory and all its subdirectories.
-  ///   If `false`, only watches the immediate directory.
   pub fn watch_path(mut self, path: PathBuf, recursive: bool) -> Self {
     self.watch_paths.push((
       path,
@@ -94,20 +78,18 @@ impl Trigger for FileSystemTrigger {
 
       return Ok(());
     }
-
-    println!("started: {:?}", self.watch_paths);
-
     let (fs_tx, mut fs_rx) = tokio::sync::mpsc::channel::<notify::Result<Event>>(1024);
     let handler = TokioEventHandler { tx: fs_tx };
 
-    let mut watcher = match RecommendedWatcher::new(handler, self.config.clone().unwrap_or_default()) {
-      Ok(w) => w,
-      Err(e) => {
-        send_error(&rt.tx, Error::from(e), "FileSystemTrigger").await;
+    let mut watcher =
+      match RecommendedWatcher::new(handler, self.config.clone().unwrap_or_default()) {
+        Ok(w) => w,
+        Err(e) => {
+          send_error(&rt.tx, Error::from(e), "FileSystemTrigger").await;
 
-        return Ok(());
-      }
-    };
+          return Ok(());
+        }
+      };
 
     for (path, mode) in &self.watch_paths {
       if let Err(e) = watcher.watch(path, *mode) {
@@ -125,7 +107,8 @@ impl Trigger for FileSystemTrigger {
             return Err(Error::FileWatcherStopped);
           };
 
-          if let Err(err) = (self.callback)(res.map_err(Into::into)).await {
+          let ctx=  TriggerContext::new(res.map_err(Into::into), rt.tx.clone());
+          if let Err(err) = (self.callback)(ctx).await {
             if !send_error(&rt.tx, err, "FileSystemTrigger").await {
               break;
             }

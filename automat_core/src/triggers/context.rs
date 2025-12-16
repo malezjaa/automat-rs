@@ -10,6 +10,7 @@ pub enum TriggerEvent {
   Stop,
 }
 
+#[derive(Debug)]
 pub struct TriggerContext<T> {
   pub data: T,
   tx: mpsc::Sender<TriggerEvent>,
@@ -68,4 +69,20 @@ pub async fn send_error(tx: &mpsc::Sender<TriggerEvent>, err: Error, trigger_nam
     return false;
   }
   true
+}
+
+#[macro_export]
+macro_rules! send_err {
+  (
+        $expr:expr,
+        $name:expr,
+        $tx:expr,
+        $ret:expr
+    ) => {
+    if let Err(err) = ($expr) {
+      if !crate::send_error($tx, err, $name).await {
+        $ret
+      }
+    }
+  };
 }

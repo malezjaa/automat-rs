@@ -1,12 +1,11 @@
 mod fs_builder;
 mod runner;
 
+use std::fmt::Debug;
 pub use fs_builder::FileSystemBuilder;
 
-use crate::{
-  pair_api, Error, FileSystemTrigger, IntervalTrigger, ProcessEvent, ProcessTrigger, Result,
-  Trigger, TriggerContext, Window, WindowTrigger,
-};
+use crate::{pair_api, ClipboardEvent, ClipboardTrigger, Error, FileSystemTrigger, IntervalTrigger, ProcessEvent, ProcessTrigger, Result, Trigger, TriggerContext, Window, WindowTrigger};
+use derivative::Derivative;
 use notify::Event;
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,6 +16,14 @@ pub type ErrorHandler = Arc<dyn Fn(Error) + Send + Sync>;
 pub struct Automat {
   triggers: Vec<Box<dyn Trigger>>,
   error_handler: Option<ErrorHandler>,
+}
+
+impl Debug for Automat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Automat")
+        .field("triggers_count", &self.triggers.len())
+        .finish()
+    }
 }
 
 impl Automat {
@@ -55,7 +62,7 @@ impl Automat {
     method
     /// Run a callback at regular intervals.
     on_interval(interval: Duration, f: F)
-      callback(Duration)
+      callback(TriggerContext<Duration>)
       => (IntervalTrigger)::new(interval, f);
   }
 
@@ -63,7 +70,7 @@ impl Automat {
     method
     /// Detect when the focused window changes.
     on_window_focus(f: F)
-      callback(Window)
+      callback(TriggerContext<Window>)
       => (WindowTrigger)::new(f);
   }
 
@@ -71,8 +78,15 @@ impl Automat {
     method
     /// Monitor filesystem changes.
     on_fs_watch(f: F)
-      callback(Result<Event>)
+      callback(TriggerContext<Result<Event>>)
       => (FileSystemTrigger)::new(f);
+  }
+  
+  pair_api! {
+    method
+    on_clipboard_change(f: F)
+      callback(TriggerContext<ClipboardEvent>)
+      => (ClipboardTrigger)::new(f);
   }
 
   /// Configure a file system watcher using a builder pattern.

@@ -1,7 +1,7 @@
-use crate::{FileSystemTrigger, Result};
+use crate::{FileSystemTrigger, Result, TriggerContext};
 use notify::{Config, Event};
-use std::path::Path;
 use std::future::Future;
+use std::path::Path;
 
 /// Builder for configuring a `FileSystemTrigger` before adding it to `Automat`.
 pub struct FileSystemBuilder {
@@ -55,7 +55,7 @@ impl FileSystemBuilder {
   /// Sets the callback and builds the `FileSystemTrigger`.
   pub fn on_event<F, Fut>(self, callback: F) -> FileSystemTrigger
   where
-    F: Fn(Result<Event>) -> Fut + Send + Sync + 'static,
+    F: Fn(TriggerContext<Result<Event>>) -> Fut + Send + Sync + 'static,
     Fut: Future<Output = Result<()>> + Send + 'static,
   {
     let mut trigger = FileSystemTrigger::new(callback);
@@ -74,7 +74,7 @@ impl FileSystemBuilder {
   /// Sets a synchronous (blocking) callback and builds the `FileSystemTrigger`.
   pub fn on_event_blocking<F>(self, callback: F) -> FileSystemTrigger
   where
-    F: Fn(Result<Event>) -> Result<()> + Send + Sync + 'static,
+    F: Fn(TriggerContext<Result<Event>>) -> Result<()> + Send + Sync + 'static,
   {
     let mut trigger = FileSystemTrigger::new_blocking(callback);
 

@@ -1,3 +1,4 @@
+mod clipboard;
 mod context;
 mod fs_watcher;
 mod interval;
@@ -6,6 +7,7 @@ mod window;
 
 use super::error::{Error, Result};
 use async_trait::async_trait;
+pub use clipboard::*;
 pub use context::*;
 pub use fs_watcher::*;
 pub use interval::*;
