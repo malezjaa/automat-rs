@@ -1,6 +1,7 @@
 mod input;
+
 mod open_in_browser;
-mod set_window_title;
+mod windows;
 
 use super::error::Result;
 use async_trait::async_trait;
@@ -8,7 +9,7 @@ use async_trait::async_trait;
 pub use enigo::{Axis, Button, Coordinate, Direction, Key};
 pub use input::*;
 pub use open_in_browser::*;
-pub use set_window_title::*;
+pub use windows::*;
 
 /// Represents a synchronous action that can be executed.
 ///

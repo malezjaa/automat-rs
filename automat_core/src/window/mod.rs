@@ -1,9 +1,11 @@
+mod exe_path;
 mod list;
 mod size;
 mod state;
 mod titlebar;
 mod window_id;
 
+pub use exe_path::*;
 pub use list::*;
 pub use size::*;
 pub use state::*;
@@ -31,41 +33,21 @@ impl Window {
   }
 
   /// Gets the currently focused window.
-  ///
-  /// # Returns
-  ///
-  /// * `Some(Window)` - The currently focused window
-  /// * `None` - If there is no focused window
   pub fn current() -> Option<Self> {
     get_current_window_identifier().map(|id| Self::new(id))
   }
 
   /// Gets the title of this window.
-  ///
-  /// # Returns
-  ///
-  /// * `Some(String)` - The window title if available
-  /// * `None` - If the title cannot be retrieved
   pub fn title(&self) -> Option<String> {
     get_window_title(self.id)
   }
 
-  /// Gets the size of this window.
-  ///
-  /// # Returns
-  ///
-  /// * `Some ((width, height))` - The window dimensions in pixels
-  /// * `None` - If the size cannot be retrieved
+  /// Gets the size of this window dimension in pixels
   pub fn size(&self) -> Option<(u32, u32)> {
     get_window_size(self.id)
   }
 
   /// Gets the state of this window.
-  ///
-  /// # Returns
-  ///
-  /// * `Ok(WindowState)` - The window state
-  /// * `Err(Error)` - If the state cannot be retrieved
   pub fn state(&self) -> crate::Result<WindowState> {
     get_window_state(self.id)
   }
@@ -73,10 +55,6 @@ impl Window {
   /// Checks if this window is visible.
   ///
   /// This is a convenience method that doesn't require retrieving the full state.
-  ///
-  /// # Returns
-  ///
-  /// `true` if the window is visible, `false` otherwise
   #[cfg(target_os = "windows")]
   pub fn is_visible(&self) -> bool {
     is_window_visible(self.id)
@@ -95,6 +73,11 @@ impl Window {
     get_current_window_identifier()
       .map(|current| current == self.id)
       .unwrap_or(false)
+  }
+
+  /// Gets the binary executable path of this window's process.
+  pub fn executable_path(&self) -> Option<String> {
+    get_window_exe_path(self.id)
   }
 }
 

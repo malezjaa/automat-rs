@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 /// Cross-platform window identifier type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WindowIdentifier(u64);
