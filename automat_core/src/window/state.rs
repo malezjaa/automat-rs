@@ -3,12 +3,7 @@ use crate::{Error, Result, WindowIdentifier};
 #[cfg(target_os = "windows")]
 /// Checks if a window is visible on Windows.
 ///
-/// This is a lightweight helper function that only checks visibility
-/// without retrieving the full window state.
-///
-/// # Returns
-///
-/// `true` if the window is visible, `false` otherwise
+/// This is a lightweight helper that only checks visibility without retrieving the full window state.
 ///
 /// # Safety
 ///
@@ -36,44 +31,29 @@ pub struct WindowState {
 }
 
 impl WindowState {
-  /// Checks if the window is in a normal state (visible, not maximized, not minimized).
-  ///
-  /// # Returns
-  ///
-  /// `true` if the window is visible, not maximized, and not minimized.
+  /// Returns true if the window is in a normal state (visible, not maximized, not minimized).
   pub fn is_normal(&self) -> bool {
     self.visible && !self.maximized && !self.minimized
   }
 
-  /// Checks if the window is hidden (not visible).
-  ///
-  /// # Returns
-  ///
-  /// `true` if the window is not visible.
+  /// Returns true if the window is hidden (not visible).
   pub fn is_hidden(&self) -> bool {
     !self.visible
   }
 
-  /// Checks if the window can accept user input.
-  ///
-  /// # Returns
-  ///
-  /// `true` if the window is enabled and visible.
+  /// Returns true if the window can accept user input (enabled and visible).
   pub fn can_accept_input(&self) -> bool {
     self.enabled && self.visible
   }
 }
 
 #[cfg(target_os = "windows")]
-/// Retrieves the state of a window on Windows.
+/// Gets the state of a window on Windows.
 ///
-/// This function uses the Windows API to get window visibility, enabled state,
-/// and placement information via `IsWindowVisible`, `IsWindowEnabled`, and `GetWindowPlacement`.
+/// Uses the Windows API to get window visibility, enabled state, and placement information
+/// via `IsWindowVisible`, `IsWindowEnabled`, and `GetWindowPlacement`.
 ///
-/// # Returns
-///
-/// * `Ok(WindowState)` - The window state if successfully retrieved
-/// * `Err(String)` - If the window handle is invalid or the API call fails
+/// Returns the window state, or an error if the window handle is invalid or the API call fails.
 ///
 /// # Safety
 ///
@@ -121,17 +101,12 @@ pub fn get_window_state(window_id: WindowIdentifier) -> Result<WindowState> {
 }
 
 #[cfg(target_os = "linux")]
-/// Retrieves the state of a window on Linux (X11).
+/// Gets the state of a window on Linux (X11).
 ///
-/// This function uses the X11 library to get window visibility, maximization,
-/// minimization, and input capability states. It queries the window attributes
-/// and the `_NET_WM_STATE` property to determine the window's state.
+/// Uses the X11 library to get window visibility, maximization, minimization, and input capability states.
+/// Queries the window attributes and the `_NET_WM_STATE` property to determine the window's state.
 ///
-///
-/// # Returns
-///
-/// * `Ok(WindowState)` - The window state if successfully retrieved
-/// * `Err(String)` - If the display cannot be opened or window attributes cannot be retrieved
+/// Returns the window state, or an error if the display can't be opened or window attributes can't be retrieved.
 ///
 /// # Safety
 ///
@@ -281,15 +256,12 @@ pub fn get_window_state(window_id: WindowIdentifier) -> Result<WindowState> {
 }
 
 #[cfg(target_os = "macos")]
-/// Retrieves the state of a window on macOS.
+/// Gets the state of a window on macOS.
 ///
-/// This function uses the Cocoa/AppKit framework to get window visibility,
-/// miniaturization (minimized), zoom (maximized), and input capability states.
+/// Uses the Cocoa/AppKit framework to get window visibility, miniaturization (minimized),
+/// zoom (maximized), and input capability states.
 ///
-/// # Returns
-///
-/// * `Ok(WindowState)` - The window state if successfully retrieved
-/// * `Err(String)` - If the window ID is invalid or the window is not found
+/// Returns the window state, or an error if the window ID is invalid or the window isn't found.
 ///
 /// # Safety
 ///

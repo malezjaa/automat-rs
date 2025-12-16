@@ -103,21 +103,11 @@ impl Window {
   }
 
   /// Lists all open windows on the system.
-  ///
-  /// # Returns
-  ///
-  /// * `Ok(Vec<Window>)` - A list of all windows with their IDs and titles
-  /// * `Err(Error)` - If the window list cannot be retrieved
   pub fn list_all() -> crate::Result<Vec<Window>> {
     list_windows()
   }
 
   /// Finds windows whose titles contain the specified text (case-insensitive).
-  ///
-  /// # Returns
-  ///
-  /// * `Ok(Vec<Window>)` - A list of matching windows
-  /// * `Err(Error)` - If the window list cannot be retrieved
   pub fn find_by_title(search: &str) -> crate::Result<Vec<Self>> {
     let windows = list_windows()?;
     let search_lower = search.to_lowercase();
@@ -138,12 +128,7 @@ impl Window {
   }
 
   /// Finds a window with an exact title match.
-  ///
-  /// # Returns
-  ///
-  /// * `Ok(Some(Window))` - The first matching window
-  /// * `Ok(None)` - If no window with that title exists
-  /// * `Err(Error)` - If the window list cannot be retrieved
+  /// Returns the first matching window, or `None` if no window with that title exists.
   pub fn find_by_exact_title(title: &str) -> crate::Result<Option<Self>> {
     let windows = list_windows()?;
 

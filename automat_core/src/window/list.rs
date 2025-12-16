@@ -4,12 +4,7 @@ use windows::core::BOOL;
 #[cfg(target_os = "windows")]
 /// Lists all open windows on Windows.
 ///
-/// This function lists all top-level windows using the Windows API
-/// and collects their window handles.
-///
-/// # Returns
-///
-/// * `Result<Vec<Window>>` - A vector of windows, or an error if enumeration fails
+/// Enumerates all top-level windows using the Windows API and collects their window handles.
 ///
 /// # Safety
 ///
@@ -46,12 +41,7 @@ pub fn list_windows() -> Result<Vec<Window>> {
 #[cfg(target_os = "linux")]
 /// Lists all open windows on Linux using X11.
 ///
-/// This function connects to the X11 display and queries all client windows
-/// to retrieve their window IDs and titles.
-///
-/// # Returns
-///
-/// * `Result<Vec<Window>>` - A vector of windows, or an error if the X11 connection fails
+/// Connects to the X11 display and queries all client windows to retrieve their window IDs and titles.
 ///
 /// # Safety
 ///
@@ -106,13 +96,8 @@ pub fn list_windows() -> Result<Vec<Window>> {
 #[cfg(target_os = "macos")]
 /// Lists all open windows on macOS using Cocoa APIs.
 ///
-/// This function uses the CGWindowListCopyWindowInfo API to retrieve
-/// information about all windows on the system and filters for regular
-/// application windows.
-///
-/// # Returns
-///
-/// * `Result<Vec<Window>>` - A vector of windows, or an error if the query fails
+/// Uses the CGWindowListCopyWindowInfo API to retrieve information about all windows on the system
+/// and filters for regular application windows.
 ///
 /// # Safety
 ///

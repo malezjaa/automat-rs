@@ -8,16 +8,10 @@ use parking_lot::Mutex;
 /// Global clipboard instance, lazily initialized on first access.
 static CLIPBOARD: Lazy<Mutex<Clipboard>> = Lazy::new(|| Mutex::new(Clipboard::new().unwrap()));
 
-/// Retrieves the current text content from the system clipboard.
+/// Gets the current text content from the system clipboard.
 ///
-/// # Errors
-///
-/// Returns an error if:
-/// - The clipboard is empty
-/// - The clipboard contains non-text data
-/// - The clipboard cannot be accessed due to system restrictions
-///
-/// # Examples
+/// Returns an error if the clipboard is empty, contains non-text data, or can't be accessed
+/// due to system restrictions.
 ///
 /// ```no_run
 /// let text = get_clipboard_text()?;
@@ -31,13 +25,8 @@ pub fn get_clipboard_text() -> Result<String> {
 /// Sets the system clipboard to the specified text content.
 ///
 /// This replaces any existing clipboard content with the provided text.
-///
-/// # Errors
-///
-/// Returns an error if the clipboard cannot be accessed or modified due to
-/// system restrictions or permission issues.
-///
-/// # Examples
+/// Returns an error if the clipboard can't be accessed or modified due to system restrictions
+/// or permission issues.
 ///
 /// ```no_run
 /// set_clipboard_text("Hello, clipboard!")?;

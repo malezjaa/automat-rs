@@ -7,7 +7,7 @@
 /// The simplified forms take a single definition and generate the `_blocking` variant
 /// automatically. You specify the callback signature via `callback(...)`.
 ///
-/// # Example (method)
+/// Example (method):
 ///
 /// ```ignore
 /// pair_api! {
@@ -19,7 +19,7 @@
 /// }
 /// ```
 ///
-/// # Example (assoc)
+/// Example (assoc):
 ///
 /// ```ignore
 /// pair_api! {

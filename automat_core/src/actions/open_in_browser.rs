@@ -5,8 +5,6 @@ use crate::{Action, Result};
 /// By default, uses the system's default browser, but can be configured
 /// to use a specific browser application.
 ///
-/// # Examples
-///
 /// ```no_run
 /// // Use default browser
 /// let action = OpenInBrowser::new("https://example.com");

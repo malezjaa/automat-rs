@@ -5,8 +5,6 @@ use crate::{Action, Result, Window, WindowIdentifier};
 /// Works on Windows (via `SetWindowTextW`), Linux (via X11 `XStoreName`),
 /// and macOS (limited support, may need accessibility permissions).
 ///
-/// # Examples
-///
 /// ```no_run
 /// use automat_core::*;
 ///

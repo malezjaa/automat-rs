@@ -36,8 +36,6 @@ pub struct TriggerRuntime {
 ///
 /// Trigger requires `Action` trait implemented.
 ///
-/// # Example
-///
 /// ```rust no_run
 /// use automat_core::{async_trait, Result, Trigger, TriggerEvent, TriggerRuntime};
 ///

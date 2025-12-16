@@ -1,15 +1,10 @@
 use crate::window::WindowIdentifier;
 
 #[cfg(target_os = "windows")]
-/// Retrieves the title of the specified window on Windows.
+/// Gets the title of the specified window on Windows.
 ///
-/// This function uses the Windows API to get the window handle
-/// and retrieves its title text.
-///
-/// # Returns
-///
-/// * `Some(String)` - The window title if successfully retrieved
-/// * `None` - If the window doesn't exist or the title is empty
+/// Uses the Windows API to get the window handle and retrieve its title text.
+/// Returns the window title, or `None` if the window doesn't exist or the title is empty.
 ///
 /// # Safety
 ///
@@ -32,21 +27,15 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 }
 
 #[cfg(target_os = "linux")]
-/// Retrieves the title of the specified window on Linux.
+/// Gets the title of the specified window on Linux.
 ///
-/// This function uses X11 (Xlib) to get the window by its identifier
-/// and fetches its name property.
-///
-/// # Returns
-///
-/// * `Some(String)` - The window title if successfully retrieved
-/// * `None` - If the X display cannot be opened, the window doesn't exist,
-///   or the window has no name
+/// Uses X11 (Xlib) to get the window by its identifier and fetch its name property.
+/// Returns the window title, or `None` if the X display can't be opened, the window doesn't exist,
+/// or the window has no name.
 ///
 /// # Safety
 ///
-/// Uses unsafe X11 API calls. Properly cleans up resources by closing
-/// the display and freeing allocated memory.
+/// Uses unsafe X11 API calls. Properly cleans up resources by closing the display and freeing allocated memory.
 pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
   use std::ffi::CStr;
   use std::ptr;
@@ -77,21 +66,18 @@ pub fn get_window_title(window_id: WindowIdentifier) -> Option<String> {
 }
 
 #[cfg(target_os = "macos")]
-/// Retrieves the title of the specified window on macOS.
+/// Gets the title of the specified window on macOS.
 ///
-/// This function uses Cocoa/Objective-C APIs to get the window information.
+/// Uses Cocoa/Objective-C APIs to get the window information.
 /// Note: On macOS, if the window_id doesn't correspond to an actual window,
 /// this returns the application name of the frontmost application.
 ///
-/// # Returns
-///
-/// * `Some(String)` - The window title or application name if successfully retrieved
-/// * `None` - If there is no window or application or the name cannot be retrieved
+/// Returns the window title or application name, or `None` if no window or application exists
+/// or the name can't be retrieved.
 ///
 /// # Safety
 ///
-/// Uses unsafe Objective-C message sending. Properly handles nil checks
-/// to prevent null pointer dereferences.
+/// Uses unsafe Objective-C message sending. Properly handles nil checks to prevent null pointer dereferences.
 pub fn get_window_title(_window_id: WindowIdentifier) -> Option<String> {
   use cocoa::base::{id, nil};
   use objc::{class, msg_send, sel, sel_impl};

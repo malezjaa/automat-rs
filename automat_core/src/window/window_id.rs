@@ -15,12 +15,8 @@ impl WindowIdentifier {
 }
 
 #[cfg(target_os = "windows")]
-/// Retrieves the identifier of the currently focused window on Windows.
-///
-/// # Returns
-///
-/// * `Some(WindowIdentifier)` - The window identifier (HWND cast to u64)
-/// * `None` - If there is no foreground window
+/// Gets the identifier of the currently focused window on Windows.
+/// Returns the window identifier (HWND cast to u64), or `None` if no window is in the foreground.
 pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
   use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
@@ -35,12 +31,8 @@ pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
 }
 
 #[cfg(target_os = "linux")]
-/// Retrieves the identifier of the currently focused window on Linux.
-///
-/// # Returns
-///
-/// * `Some(WindowIdentifier)` - The window identifier (X11 Window ID)
-/// * `None` - If the X display cannot be opened or there is no focused window
+/// Gets the identifier of the currently focused window on Linux.
+/// Returns the X11 Window ID, or `None` if the X display can't be opened or no window has focus.
 pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
   use std::ptr;
   use x11::xlib::*;
@@ -66,15 +58,12 @@ pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
 }
 
 #[cfg(target_os = "macos")]
-/// Retrieves the identifier of the currently focused application on macOS.
+/// Gets the identifier of the currently focused application on macOS.
 ///
 /// Note: On macOS, this returns a process identifier (PID) since there's no
 /// direct window handle equivalent like on Windows or X11.
 ///
-/// # Returns
-///
-/// * `Some(WindowIdentifier)` - The application process ID
-/// * `None` - If there is no frontmost application
+/// Returns the application's process ID, or `None` if no application is frontmost.
 pub fn get_current_window_identifier() -> Option<WindowIdentifier> {
   use cocoa::base::{id, nil};
   use objc::{class, msg_send, sel, sel_impl};

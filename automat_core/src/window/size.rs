@@ -1,14 +1,10 @@
 use crate::WindowIdentifier;
 
 #[cfg(target_os = "windows")]
-/// Retrieves the size of the window on Windows.
+/// Gets the size of the window on Windows.
 ///
-/// This function uses the Windows API to get the window dimensions via `GetWindowRect`.
-///
-/// # Returns
-///
-/// * `Some((u32, u32))` - The window size (width, height) if successfully retrieved
-/// * `None` - If the window handle is invalid, or the API call fails
+/// Uses the Windows API to get the window dimensions via `GetWindowRect`.
+/// Returns (width, height) in pixels, or `None` if the window handle is invalid or the API call fails.
 ///
 /// # Safety
 ///
@@ -33,14 +29,10 @@ pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
 }
 
 #[cfg(target_os = "linux")]
-/// Retrieves the size of the window on Linux.
+/// Gets the size of the window on Linux.
 ///
-/// This function uses X11 API to get the window dimensions.
-///
-/// # Returns
-///
-/// * `Some((u32, u32))` - The window size (width, height) if successfully retrieved
-/// * `None` - If the window ID is invalid, or the API call fails
+/// Uses the X11 API to get the window dimensions.
+/// Returns (width, height) in pixels, or `None` if the window ID is invalid or the API call fails.
 ///
 /// # Safety
 ///
@@ -71,14 +63,10 @@ pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
 }
 
 #[cfg(target_os = "macos")]
-/// Retrieves the size of the window on macOS.
+/// Gets the size of the window on macOS.
 ///
-/// This function uses Core Graphics API to get the window dimensions.
-///
-/// # Returns
-///
-/// * `Some((u32, u32))` - The window size (width, height) if successfully retrieved
-/// * `None` - If the window ID is invalid, or the API call fails
+/// Uses Core Graphics API to get the window dimensions.
+/// Returns (width, height) in pixels, or `None` if the window ID is invalid or the API call fails.
 pub fn get_window_size(window_id: WindowIdentifier) -> Option<(u32, u32)> {
   use core_foundation::array::CFArray;
   use core_foundation::base::TCFType;
