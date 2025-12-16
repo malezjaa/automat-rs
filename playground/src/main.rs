@@ -1,12 +1,20 @@
 use automat_core::*;
-use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<()> {
   Automat::new()
-    .on_clipboard_change(async |ctx| {
-        println!("Clipboard changed: {}", ctx.data.content());
-        Ok(())
+    .on_window_focus(async |ctx| {
+      let window = ctx.data;
+      let title = format!(
+        "Focused: {}",
+        window.title().unwrap_or("Untitled".to_string())
+      );
+      let action = SetWindowTitle::for_window(window, &title);
+      action.run()?;
+
+      println!("{:?}", window.title());
+
+      Ok(())
     })
     .run()
     .await

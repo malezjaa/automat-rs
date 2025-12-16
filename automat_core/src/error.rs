@@ -16,6 +16,9 @@ pub enum Error {
   #[error("Window list error: {0}")]
   WindowListError(String),
 
+  #[error("Window title error: {0}")]
+  WindowTitleError(String),
+
   #[error("Clipboard error: {0}")]
   ClipboardError(#[from] arboard::Error),
 
